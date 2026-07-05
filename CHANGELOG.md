@@ -7,14 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-07-05
+
+First public release.
+
 ### Added
 
-- iOS support backed by the native `EzoicAdsSDK` CocoaPod (`~> 1.5.0`, iOS 14+),
-  resolved through the External Dependency Manager for Unity (EDM4U) iOS Resolver
-  or a manual Podfile line. The full `EzoicAds`, `EzoicBannerAd`,
-  `EzoicInterstitialAd`, and `EzoicRewardedAd` API behaves identically to Android:
-  ad event callbacks are delivered on the Unity main thread, calls after
-  `Destroy()` are safe no-ops, and no call throws.
+- Android support backed by the native `com.ezoic.sdk:ezoic-ads-sdk:1.5.0`
+  library and iOS support backed by the native `EzoicAdsSDK` CocoaPod
+  (`~> 1.5.0`, iOS 14+), both resolved through the External Dependency Manager
+  for Unity (EDM4U) or a manual Gradle dependency / Podfile line. The full
+  `EzoicAds`, `EzoicBannerAd`, `EzoicInterstitialAd`, and `EzoicRewardedAd` API
+  behaves identically on both platforms: ad event callbacks are delivered on the
+  Unity main thread, calls after `Destroy()` are safe no-ops, and no call throws.
+- Banner, interstitial, and rewarded ad types with their full event surfaces,
+  including the rewarded ad's `OnUserEarnedReward(string type, int amount)`.
+- On unsupported platforms (including the Unity editor) the full API remains
+  callable: it logs a one-line warning and delivers load callbacks as failures so
+  game code runs unchanged.
+- "Basic Integration" sample (importable from the Package Manager Samples tab): a
+  single MonoBehaviour with an IMGUI control panel that initializes the SDK and
+  loads, shows, hides, and destroys every ad type while logging each ad event.
 
 ## [0.1.0] - 2026-07-05
 
@@ -39,5 +52,6 @@ Initial release.
   it logs a one-line warning and delivers load callbacks as failures so game code
   runs unchanged.
 
-[Unreleased]: https://github.com/ezoic/ezoic-unity-sdk/compare/0.1.0...HEAD
+[Unreleased]: https://github.com/ezoic/ezoic-unity-sdk/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/ezoic/ezoic-unity-sdk/releases/tag/v1.0.0
 [0.1.0]: https://github.com/ezoic/ezoic-unity-sdk/releases/tag/0.1.0

@@ -27,7 +27,7 @@ no-ops, so you can develop and play in the editor without any platform guards in
 In Unity, open **Window → Package Manager → + → Add package from git URL…** and enter:
 
 ```
-https://github.com/ezoic/ezoic-unity-sdk.git
+https://github.com/ezoic/ezoic-unity-sdk.git#v1.0.0
 ```
 
 Or add it to your project's `Packages/manifest.json` dependencies:
@@ -35,10 +35,12 @@ Or add it to your project's `Packages/manifest.json` dependencies:
 ```json
 {
   "dependencies": {
-    "com.ezoic.ads": "https://github.com/ezoic/ezoic-unity-sdk.git"
+    "com.ezoic.ads": "https://github.com/ezoic/ezoic-unity-sdk.git#v1.0.0"
   }
 }
 ```
+
+The `#v1.0.0` suffix pins a released version; omit it to track the default branch.
 
 ### 2. Provide the native Android library
 
@@ -241,6 +243,18 @@ EzoicRewardedAd.Load(
 Always call `ad.Destroy()` when you are done with a rewarded ad; skipping it leaks the native
 ad object, since the managed and native peers hold a cross-heap reference cycle that neither
 garbage collector can collect on its own.
+
+## Samples
+
+The package ships a **Basic Integration** sample: a single `MonoBehaviour` with an
+IMGUI control panel that initializes the SDK and loads, shows, hides, and destroys
+banner, interstitial, and rewarded ads while logging every ad event on screen.
+
+To import it, open **Window → Package Manager**, select **Ezoic Ads** in the
+package list, open the **Samples** tab, and click **Import** next to
+*Basic Integration*. Then attach the imported `EzoicAdsDemo` script to a
+`GameObject` in an empty scene, set your domain and ad unit ids in the Inspector,
+and build to a device. See the sample's own README for details.
 
 ## Editor and unsupported platforms
 

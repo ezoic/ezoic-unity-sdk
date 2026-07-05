@@ -35,6 +35,7 @@
 
   <ItemGroup>
     <Compile Include="../../Runtime/**/*.cs" />
+    <Compile Include="../../Samples~/**/*.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -44,6 +45,10 @@
     </Reference>
     <Reference Include="UnityEngine.SharedInternalsModule">
       <HintPath>$(UnityManagedPath)/UnityEngine.SharedInternalsModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.IMGUIModule">
+      <HintPath>$(UnityManagedPath)/UnityEngine.IMGUIModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
   </ItemGroup>
