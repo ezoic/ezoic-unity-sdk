@@ -1,0 +1,10 @@
+# Build output from the compile-check csproj projects (tools/compile) and any
+# consuming Unity project that pulls this package in-place.
+obj/
+bin/
+Library/
+
+# IDE / editor scratch files
+*.user
+.idea/
+.vs/

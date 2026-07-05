@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  External Dependency Manager for Unity (EDM4U) dependency manifest.
+  Declares the native Ezoic Ads Android library so EDM4U's Android Resolver
+  adds it to the generated Gradle build. If your project does not use EDM4U,
+  add the equivalent line to your mainTemplate.gradle manually (see README).
+-->
+<dependencies>
+  <androidPackages>
+    <androidPackage spec="com.ezoic.sdk:ezoic-ads-sdk:1.5.0">
+      <repositories>
+        <repository>https://repo1.maven.org/maven2</repository>
+      </repositories>
+    </androidPackage>
+  </androidPackages>
+</dependencies>

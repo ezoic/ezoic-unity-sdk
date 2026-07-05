@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Compile-only project for the Editor / non-Android build variant of the Ezoic Ads Unity
+    SDK. With no UNITY_ANDROID define the device bridge is excluded and the cross-platform
+    stub path is compiled instead — the same code that runs in the Unity editor and on
+    not-yet-supported platforms. It must build with ZERO Android JNI references.
+
+    Usage:
+      dotnet build tools/compile/Ezoic.Ads.Editor.csproj \
+        -p:UnityManagedPath=$HOME/.local/toolchains/unity-managed-2022.3.62f3
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <AssemblyName>Ezoic.Ads</AssemblyName>
+    <RootNamespace>Ezoic.Ads</RootNamespace>
+    <!-- No UNITY_ANDROID / no !UNITY_EDITOR: the stub path is compiled. -->
+    <DefineConstants></DefineConstants>
+    <!-- Override on the command line: -p:UnityManagedPath=/path/to/Managed/UnityEngine -->
+    <UnityManagedPath Condition="'$(UnityManagedPath)' == ''">$(UNITY_MANAGED_PATH)</UnityManagedPath>
+  </PropertyGroup>
+
+  <Target Name="_EzoicCheckUnityManagedPath" BeforeTargets="BeforeCompile">
+    <Error
+      Condition="'$(UnityManagedPath)' == '' or !Exists('$(UnityManagedPath)/UnityEngine.CoreModule.dll')"
+      Text="UnityManagedPath is not set or does not contain UnityEngine.CoreModule.dll. Pass -p:UnityManagedPath=/path/to/Editor/Data/Managed/UnityEngine (got: '$(UnityManagedPath)')." />
+  </Target>
+
+  <ItemGroup>
+    <Compile Include="../../Runtime/**/*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(UnityManagedPath)/UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.SharedInternalsModule">
+      <HintPath>$(UnityManagedPath)/UnityEngine.SharedInternalsModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  # Type-check Runtime/**/*.cs against real Unity 2022.3 managed assemblies, under both the
+  # Android device define set and the plain (editor / unsupported) set. No Unity license used.
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Cache Unity managed assemblies
+        id: cache-unity
+        uses: actions/cache@v4
+        with:
+          path: ~/unity-managed
+          key: unity-managed-2022.3.62f3
+
+      - name: Download Unity managed assemblies
+        if: steps.cache-unity.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/unity-managed"
+          curl -fL -o /tmp/Unity.tar.xz \
+            https://download.unity3d.com/download_unity/96770f904ca7/LinuxEditorInstaller/Unity.tar.xz
+          # Extract only the managed UnityEngine DLLs, flattened directly into ~/unity-managed.
+          tar --wildcards --no-same-owner --strip-components=4 \
+            -xf /tmp/Unity.tar.xz \
+            -C "$HOME/unity-managed" \
+            'Editor/Data/Managed/UnityEngine/*.dll'
+          rm -f /tmp/Unity.tar.xz
+          ls "$HOME/unity-managed" | head
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Compile (Android define set)
+        run: >-
+          dotnet build tools/compile/Ezoic.Ads.Android.csproj
+          -p:UnityManagedPath=$HOME/unity-managed
+          -warnaserror
+
+      - name: Compile (Editor / no-platform define set)
+        run: >-
+          dotnet build tools/compile/Ezoic.Ads.Editor.csproj
+          -p:UnityManagedPath=$HOME/unity-managed
+          -warnaserror
+
+  # Verify every JNI class/method name the Android bridge uses exists in the published AAR.
+  jni-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Download AAR and extract classes
+        run: |
+          set -euo pipefail
+          curl -fL -o ezoic-ads-sdk.aar \
+            https://repo1.maven.org/maven2/com/ezoic/sdk/ezoic-ads-sdk/1.5.0/ezoic-ads-sdk-1.5.0.aar
+          unzip -o ezoic-ads-sdk.aar classes.jar -d aar_extract
+          mkdir -p aar_classes
+          (cd aar_classes && jar xf ../aar_extract/classes.jar)
+
+      - name: Run JNI signature audit
+        run: AAR_CLASSES="$PWD/aar_classes" python3 tools/audit-jni.py
+
+  # Structural validation of the package manifest, assembly definitions, and EDM4U manifest.
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Validate package.json
+        run: python3 -c "import json; json.load(open('package.json'))"
+
+      - name: Validate Runtime assembly definition
+        run: python3 -c "import json; json.load(open('Runtime/Ezoic.Ads.asmdef'))"
+
+      - name: Validate EzoicDependencies.xml
+        run: python3 -c "import xml.etree.ElementTree as ET; ET.parse('Editor/EzoicDependencies.xml')"
