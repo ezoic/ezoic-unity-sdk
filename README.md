@@ -13,12 +13,12 @@ platform-agnostic.
 | Platform | Status |
 | --- | --- |
 | Android | Supported |
-| iOS | Coming soon |
+| iOS | Supported (iOS 14+) |
 | Editor / other platforms | API is callable and safe (see [Editor behavior](#editor-and-unsupported-platforms)) |
 
-On Android the API calls the native `com.ezoic.sdk:ezoic-ads-sdk` library. On every other
-platform the same calls compile and run as safe no-ops, so you can develop and play in the
-editor without any platform guards in your game code.
+On Android the API calls the native `com.ezoic.sdk:ezoic-ads-sdk` library; on iOS it calls the
+native `EzoicAdsSDK` CocoaPod. On every other platform the same calls compile and run as safe
+no-ops, so you can develop and play in the editor without any platform guards in your game code.
 
 ## Installation
 
@@ -84,6 +84,32 @@ inside the `<application>` tag of `Assets/Plugins/Android/AndroidManifest.xml`:
 
 Replace the value with the Google Ad Manager application ID provided for your account. A
 missing or incorrect app ID causes the app to crash on start.
+
+### 4. Provide the native iOS library
+
+iOS ads run on the native `EzoicAdsSDK` CocoaPod (requires **iOS 14+**). Unity automatically
+adds this package's Swift bridge (`Runtime/Plugins/iOS/EzoicAdsUnityBridge.swift`) to the
+generated Xcode project as a native plugin — you do not copy or configure any source yourself.
+You only need to make the pod available to the generated Xcode project in **one** of two ways.
+
+**Option A — External Dependency Manager for Unity (EDM4U), recommended.**
+Install [EDM4U](https://github.com/googlesamples/unity-jar-resolver). This package ships an
+`Editor/EzoicDependencies.xml` manifest, so EDM4U's iOS Resolver automatically adds
+`pod 'EzoicAdsSDK', '~> 1.5.0'` to the generated Xcode project's `Podfile` and runs
+`pod install`. No further action needed.
+
+**Option B — Manual Podfile line.**
+If you do not use EDM4U, build the Xcode project from Unity, then add the pod to the generated
+`Podfile` in the Xcode output directory and run `pod install`:
+
+```ruby
+target 'UnityFramework' do
+  pod 'EzoicAdsSDK', '~> 1.5.0'
+end
+```
+
+Set the iOS Deployment Target to **14.0 or higher** under
+**Project Settings → Player → iOS → Other Settings → Target minimum iOS Version**.
 
 ## Quick start
 

@@ -8,3 +8,7 @@ Library/
 *.user
 .idea/
 .vs/
+
+# Python bytecode cache from the tools/ audit scripts (audit-jni.py, audit-extern.py)
+__pycache__/
+*.pyc

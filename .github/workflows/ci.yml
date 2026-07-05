@@ -48,6 +48,12 @@ jobs:
           -p:UnityManagedPath=$HOME/unity-managed
           -warnaserror
 
+      - name: Compile (iOS define set)
+        run: >-
+          dotnet build tools/compile/Ezoic.Ads.iOS.csproj
+          -p:UnityManagedPath=$HOME/unity-managed
+          -warnaserror
+
       - name: Compile (Editor / no-platform define set)
         run: >-
           dotnet build tools/compile/Ezoic.Ads.Editor.csproj
@@ -78,6 +84,97 @@ jobs:
 
       - name: Run JNI signature audit
         run: AAR_CLASSES="$PWD/aar_classes" python3 tools/audit-jni.py
+
+  # Type-check Runtime/Plugins/iOS/*.swift against the real published EzoicAdsSDK
+  # API (the same 1.5.0 dist package Unity resolves via CocoaPods) so a rename or
+  # signature drift in the native SDK breaks CI here rather than in a publisher's
+  # Xcode build. Compiles only — no simulator boot, no tests.
+  swift-bridge:
+    runs-on: macos-15
+    # Cold checkout resolves and builds the EzoicAdsSDK dist graph (Prebid Mobile,
+    # GMA) from source, so give the build generous headroom.
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Select Xcode 16
+        # macos-15 ships Xcode 16.x as /Applications/Xcode.app; the resolved
+        # EzoicAdsSDK 1.5.0 package graph (objectVersion-77) requires Xcode 16.
+        run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Stage bridge sources into the type-check package
+        # The scratch package commits only a .gitkeep in its target dir; copy the
+        # real bridge sources in so xcodebuild has something to compile. These
+        # copies are gitignored (tools/swift-typecheck/.gitignore) and never
+        # committed, keeping the single source of truth in Runtime/Plugins/iOS.
+        run: |
+          set -euo pipefail
+          dest="tools/swift-typecheck/Sources/EzoicUnityBridgeCheck"
+          shopt -s nullglob
+          swift_files=(Runtime/Plugins/iOS/*.swift)
+          if [ ${#swift_files[@]} -eq 0 ]; then
+            echo "::error::No Swift bridge sources found under Runtime/Plugins/iOS"
+            exit 1
+          fi
+          cp "${swift_files[@]}" "$dest/"
+          echo "Staged: ${swift_files[*]}"
+          ls -1 "$dest"
+
+      - name: Type-check the Swift bridge
+        working-directory: tools/swift-typecheck
+        run: |
+          set -euo pipefail
+
+          # SwiftPM generates an "<PackageName>" scheme and sometimes a
+          # "<PackageName>-Package" scheme. Prefer the "-Package" scheme, then
+          # fall back to the bare product scheme, then to whatever
+          # `xcodebuild -list` reports first under "Schemes:".
+          echo "::group::Available schemes"
+          xcodebuild -list
+          echo "::endgroup::"
+
+          SCHEME=""
+          if xcodebuild -list 2>/dev/null | grep -qxE ' *EzoicUnityBridgeCheck-Package'; then
+            SCHEME="EzoicUnityBridgeCheck-Package"
+          elif xcodebuild -list 2>/dev/null | grep -qxE ' *EzoicUnityBridgeCheck'; then
+            SCHEME="EzoicUnityBridgeCheck"
+          else
+            # Last resort: first scheme listed under "Schemes:". `|| true`
+            # keeps set -e from killing the script inside the substitution
+            # so the empty-check below can emit a readable ::error::.
+            SCHEME="$(xcodebuild -list 2>/dev/null \
+              | awk '/Schemes:/{f=1;next} f&&NF{gsub(/^[ \t]+/,"");print;exit}' \
+              || true)"
+          fi
+          if [ -z "$SCHEME" ]; then
+            echo "::error::Could not resolve an xcodebuild scheme"
+            exit 1
+          fi
+          echo "Using scheme: $SCHEME"
+
+          # `generic/platform=iOS Simulator` compiles for the simulator SDK
+          # without booting a device — a hardcoded simulator name would rot as
+          # the runner image's device list drifts.
+          xcodebuild build \
+            -scheme "$SCHEME" \
+            -destination 'generic/platform=iOS Simulator' \
+            -skipPackagePluginValidation \
+            COMPILER_INDEX_STORE_ENABLE=NO
+
+  # Assert the Swift @_cdecl export set and the C# [DllImport("__Internal")] extern
+  # set are identical — same names, same parameter counts, both directions — so the
+  # ABI can't silently drift between the two halves of the bridge.
+  extern-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Run extern signature audit
+        run: python3 tools/audit-extern.py
 
   # Structural validation of the package manifest, assembly definitions, and EDM4U manifest.
   validate:

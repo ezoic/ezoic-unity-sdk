@@ -2,6 +2,8 @@ using System;
 using UnityEngine;
 #if UNITY_ANDROID && !UNITY_EDITOR
 using Ezoic.Ads.Android;
+#elif UNITY_IOS && !UNITY_EDITOR
+using Ezoic.Ads.iOS;
 #endif
 
 namespace Ezoic.Ads
@@ -227,6 +229,111 @@ namespace Ezoic.Ads
                 case BannerPosition.BottomRight: return bottom | right;
                 case BannerPosition.Center: return center;
                 default: return bottom | centerH;
+            }
+        }
+#elif UNITY_IOS && !UNITY_EDITOR
+        private readonly int _id;
+        private volatile bool _destroyed;
+
+        // Native -> managed event delivery. IosBridge invokes these on the Unity main thread
+        // (inside an EzoicMainThreadDispatcher-enqueued action), so they raise the public events
+        // directly. Banner load failure is NOT terminal — the host can call Load() again — so the
+        // instance stays registered until Destroy().
+        internal void HandleLoaded() => RaiseLoaded();
+        internal void HandleLoadFailed(string error) => RaiseLoadFailed(error);
+        internal void HandleClicked() => RaiseClicked();
+        internal void HandleImpression() => RaiseImpression();
+
+        /// <summary>Creates a banner and adds it to the key window's root view at <paramref name="position"/>.</summary>
+        /// <param name="adUnitId">Ezoic ad unit identifier.</param>
+        /// <param name="position">Screen anchor position.</param>
+        /// <param name="size">Optional size string such as "320x50"; null requests an adaptive banner.</param>
+        public EzoicBannerAd(int adUnitId, BannerPosition position, string size = null)
+        {
+            EzoicMainThreadDispatcher.Init();
+            _id = IosBridge.NextId();
+            IosBridge.RegisterBanner(_id, this);
+            try
+            {
+                IosBridge.BannerCreate(_id, adUnitId, (int)position, size);
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+            }
+        }
+
+        /// <summary>Requests an ad. No-op after <see cref="Destroy"/>.</summary>
+        public void Load()
+        {
+            if (_destroyed)
+            {
+                return;
+            }
+
+            try
+            {
+                IosBridge.BannerLoad(_id);
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+            }
+        }
+
+        /// <summary>Makes the banner visible. No-op after <see cref="Destroy"/>.</summary>
+        public void Show()
+        {
+            if (_destroyed)
+            {
+                return;
+            }
+
+            try
+            {
+                IosBridge.BannerShow(_id);
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+            }
+        }
+
+        /// <summary>Hides the banner without destroying it. No-op after <see cref="Destroy"/>.</summary>
+        public void Hide()
+        {
+            if (_destroyed)
+            {
+                return;
+            }
+
+            try
+            {
+                IosBridge.BannerHide(_id);
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+            }
+        }
+
+        /// <summary>Stops loading, destroys the native view, and removes it from the view tree.</summary>
+        public void Destroy()
+        {
+            if (_destroyed)
+            {
+                return;
+            }
+
+            _destroyed = true;
+            IosBridge.UnregisterBanner(_id);
+            try
+            {
+                IosBridge.BannerDestroy(_id);
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
             }
         }
 #else

@@ -1,0 +1,8 @@
+# Bridge sources are copied in by the swift-bridge CI job, never committed here.
+Sources/EzoicUnityBridgeCheck/*.swift
+
+# SwiftPM / Xcode build artifacts.
+.build/
+Package.resolved
+*.xcodeproj
+DerivedData/

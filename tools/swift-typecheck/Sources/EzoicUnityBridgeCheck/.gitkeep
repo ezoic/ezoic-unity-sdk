@@ -1,0 +1,3 @@
+# Keeps the SwiftPM target source directory in git. The swift-bridge CI job copies
+# ../../../../Runtime/Plugins/iOS/*.swift here before building; those copies are
+# gitignored (see tools/swift-typecheck/.gitignore). Do not add real sources here.

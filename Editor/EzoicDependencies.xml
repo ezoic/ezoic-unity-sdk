@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   External Dependency Manager for Unity (EDM4U) dependency manifest.
-  Declares the native Ezoic Ads Android library so EDM4U's Android Resolver
-  adds it to the generated Gradle build. If your project does not use EDM4U,
-  add the equivalent line to your mainTemplate.gradle manually (see README).
+  Declares the native Ezoic Ads libraries so EDM4U's resolvers add them to the
+  generated builds: the Android Resolver adds the Maven package to Gradle, and
+  the iOS Resolver adds the CocoaPod to the generated Xcode project's Podfile.
+  If your project does not use EDM4U, add the equivalent lines to your
+  mainTemplate.gradle / Podfile manually (see README).
 -->
 <dependencies>
   <androidPackages>
@@ -13,4 +15,7 @@
       </repositories>
     </androidPackage>
   </androidPackages>
+  <iosPods>
+    <iosPod name="EzoicAdsSDK" version="~> 1.5.0" minTargetSdk="14.0" />
+  </iosPods>
 </dependencies>
