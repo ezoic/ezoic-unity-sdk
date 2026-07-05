@@ -43,9 +43,11 @@ import EzoicAdsSDK
 // MARK: - Callback function-pointer types (kept comma-free so the extern audit
 // can count parameters by top-level commas alone).
 
-private typealias IdCallback = @convention(c) (Int32) -> Void
-private typealias IdMessageCallback = @convention(c) (Int32, UnsafePointer<CChar>?) -> Void
-private typealias IdRewardCallback = @convention(c) (Int32, UnsafePointer<CChar>?, Int32) -> Void
+// Public because the public @_cdecl set_callbacks functions take them as
+// parameters (a public function cannot use a less-accessible type).
+public typealias IdCallback = @convention(c) (Int32) -> Void
+public typealias IdMessageCallback = @convention(c) (Int32, UnsafePointer<CChar>?) -> Void
+public typealias IdRewardCallback = @convention(c) (Int32, UnsafePointer<CChar>?, Int32) -> Void
 
 // MARK: - Stored callbacks (main-thread only; see threading invariant).
 
