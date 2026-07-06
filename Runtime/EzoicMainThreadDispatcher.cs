@@ -33,7 +33,12 @@ namespace Ezoic.Ads
             {
                 hideFlags = HideFlags.HideAndDontSave
             };
-            DontDestroyOnLoad(go);
+            // DontDestroyOnLoad throws InvalidOperationException outside play mode
+            // (e.g. editor scripts and EditMode tests calling into the SDK API).
+            if (Application.isPlaying)
+            {
+                DontDestroyOnLoad(go);
+            }
             _instance = go.AddComponent<EzoicMainThreadDispatcher>();
         }
 

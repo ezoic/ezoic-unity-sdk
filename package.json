@@ -1,6 +1,6 @@
 {
   "name": "com.ezoic.ads",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "displayName": "Ezoic Ads",
   "description": "Ezoic Ads SDK for Unity. Monetize your Android and iOS game with Ezoic banner, interstitial, and rewarded ads through a simple C# API. Requires the External Dependency Manager for Unity (EDM4U) to resolve the native Android library and iOS CocoaPod, or a manual Gradle dependency / Podfile line (see the README).",
   "unity": "2021.3",
