@@ -27,7 +27,7 @@ no-ops, so you can develop and play in the editor without any platform guards in
 In Unity, open **Window → Package Manager → + → Add package from git URL…** and enter:
 
 ```
-https://github.com/ezoic/ezoic-unity-sdk.git#v1.0.0
+https://github.com/ezoic/ezoic-unity-sdk.git#v1.0.1
 ```
 
 Or add it to your project's `Packages/manifest.json` dependencies:
@@ -35,12 +35,12 @@ Or add it to your project's `Packages/manifest.json` dependencies:
 ```json
 {
   "dependencies": {
-    "com.ezoic.ads": "https://github.com/ezoic/ezoic-unity-sdk.git#v1.0.0"
+    "com.ezoic.ads": "https://github.com/ezoic/ezoic-unity-sdk.git#v1.0.1"
   }
 }
 ```
 
-The `#v1.0.0` suffix pins a released version; omit it to track the default branch.
+The `#v1.0.1` suffix pins a released version; omit it to track the default branch.
 
 ### 2. Provide the native Android library
 
