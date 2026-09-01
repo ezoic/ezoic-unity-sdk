@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-09-01
+
+### Changed
+
+- Bump native SDK pins to 1.6.0 (AppSDK/BundleId on ad-config requests; imp.ext.ezoic identity echo on auction imps).
+
 ## [1.0.1] - 2026-07-06
 
 ### Fixed
