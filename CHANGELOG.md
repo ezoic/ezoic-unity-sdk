@@ -7,11 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.6.0] - 2026-09-01
+## [1.6.1] - 2026-09-02
 
 ### Changed
 
-- Bump native SDK pins to 1.6.0 (AppSDK/BundleId on ad-config requests; imp.ext.ezoic identity echo on auction imps).
+- Bump native SDK pins to 1.6.1 (AppSDK/BundleId on ad-config requests; imp.ext.ezoic identity echo on auction imps).
+- Native SDKs now fit the Prebid creative size to the ad view width before resizing (outstream video fills the frame; no more clipped 640x360 creatives).
 
 ## [1.0.1] - 2026-07-06
 

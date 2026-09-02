@@ -3,7 +3,7 @@
 //  Ezoic Ads SDK for Unity — iOS native bridge
 //
 //  C-ABI shim between the Unity C# runtime (Runtime/iOS/IosBridge.cs) and the
-//  published EzoicAdsSDK 1.6.0 xcframework. Every export is prefixed
+//  published EzoicAdsSDK 1.6.1 xcframework. Every export is prefixed
 //  `ezoic_unity_` and declared `@_cdecl` so IL2CPP can bind it via
 //  [DllImport("__Internal")]. The C# extern set and this export set are kept in
 //  lockstep by tools/audit-extern.py (name + parameter-count equality, both
