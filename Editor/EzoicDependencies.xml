@@ -9,13 +9,13 @@
 -->
 <dependencies>
   <androidPackages>
-    <androidPackage spec="com.ezoic.sdk:ezoic-ads-sdk:1.5.0">
+    <androidPackage spec="com.ezoic.sdk:ezoic-ads-sdk:1.6.1">
       <repositories>
         <repository>https://repo1.maven.org/maven2</repository>
       </repositories>
     </androidPackage>
   </androidPackages>
   <iosPods>
-    <iosPod name="EzoicAdsSDK" version="~> 1.5.0" minTargetSdk="14.0" />
+    <iosPod name="EzoicAdsSDK" version="~> 1.6.1" minTargetSdk="14.0" />
   </iosPods>
 </dependencies>
