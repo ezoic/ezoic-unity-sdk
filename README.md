@@ -44,7 +44,7 @@ The `#v1.0.1` suffix pins a released version; omit it to track the default branc
 
 ### 2. Provide the native Android library
 
-The Android ads run on the native `com.ezoic.sdk:ezoic-ads-sdk:1.7.0` library, which is
+The Android ads run on the native `com.ezoic.sdk:ezoic-ads-sdk:1.8.0` library, which is
 published on Maven Central. You need to make that dependency available to your Android build
 in **one** of two ways.
 
@@ -60,7 +60,7 @@ Maven Central repository to the generated `Assets/Plugins/Android/mainTemplate.g
 
 ```gradle
 dependencies {
-    implementation 'com.ezoic.sdk:ezoic-ads-sdk:1.7.0'
+    implementation 'com.ezoic.sdk:ezoic-ads-sdk:1.8.0'
 }
 ```
 
@@ -97,7 +97,7 @@ You only need to make the pod available to the generated Xcode project in **one*
 **Option A — External Dependency Manager for Unity (EDM4U), recommended.**
 Install [EDM4U](https://github.com/googlesamples/unity-jar-resolver). This package ships an
 `Editor/EzoicDependencies.xml` manifest, so EDM4U's iOS Resolver automatically adds
-`pod 'EzoicAdsSDK', '~> 1.7.0'` to the generated Xcode project's `Podfile` and runs
+`pod 'EzoicAdsSDK', '~> 1.8.0'` to the generated Xcode project's `Podfile` and runs
 `pod install`. No further action needed.
 
 **Option B — Manual Podfile line.**
@@ -106,7 +106,7 @@ If you do not use EDM4U, build the Xcode project from Unity, then add the pod to
 
 ```ruby
 target 'UnityFramework' do
-  pod 'EzoicAdsSDK', '~> 1.7.0'
+  pod 'EzoicAdsSDK', '~> 1.8.0'
 end
 ```
 
