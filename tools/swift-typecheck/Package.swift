@@ -17,10 +17,10 @@ let package = Package(
     ],
     dependencies: [
         .package(
-            // Matches Editor/EzoicDependencies.xml's `~> 1.7.0` (CocoaPods optimistic
-            // operator) so CI type-checks the same 1.7.x range the pod can resolve to.
+            // Matches Editor/EzoicDependencies.xml's `~> 1.8.0` (CocoaPods optimistic
+            // operator) so CI type-checks the same 1.8.x range the pod can resolve to.
             url: "https://github.com/ezoic/ezoic-swift-sdk-dist",
-            .upToNextMinor(from: "1.7.0")
+            .upToNextMinor(from: "1.8.0")
         )
     ],
     targets: [

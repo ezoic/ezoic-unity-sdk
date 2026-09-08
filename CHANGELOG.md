@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-09-08
+
+### Changed
+
+- Bump native Ezoic Ads SDK pins to 1.8.0. `testMode` now also requests $0.00 Ezoic test-ad fill on no-demand auctions (development builds / simulators only); the first auction is still a real auction.
+
 ## [1.7.0] - 2026-09-08
 
 ### Changed
