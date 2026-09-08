@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-09-08
+
+### Changed
+
+- Bump native SDK pins to 1.7.0. Prebid floor gate: the native SDKs now attach Prebid keywords to the GAM request only when the Prebid bid meets the current eb_br rung floor (Google-only requests otherwise), mirroring web adjustHbValues; ad-unit config parses the new `targeting_floors` array parallel to `targeting_hashes`. Prebid Mobile demand is fetched once per load.
+
 ## [1.6.1] - 2026-09-02
 
 ### Changed
