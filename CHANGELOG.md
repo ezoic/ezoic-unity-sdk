@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.0] - 2026-09-11
+
+### Changed
+- Rewarded ads report their lifecycle (request, start, reward granted, close, failed-to-show) so rewarded performance can be tracked per placement. Native pins bumped to `com.ezoic.sdk:ezoic-ads-sdk:1.10.0` / `EzoicAdsSDK ~> 1.10.0`. No Unity API change.
+
 ## [1.9.1] - 2026-09-11
 
 ### Changed
