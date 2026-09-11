@@ -27,7 +27,7 @@ no-ops, so you can develop and play in the editor without any platform guards in
 In Unity, open **Window → Package Manager → + → Add package from git URL…** and enter:
 
 ```
-https://github.com/ezoic/ezoic-unity-sdk.git#v1.0.1
+https://github.com/ezoic/ezoic-unity-sdk.git#v1.9.0
 ```
 
 Or add it to your project's `Packages/manifest.json` dependencies:
@@ -35,16 +35,16 @@ Or add it to your project's `Packages/manifest.json` dependencies:
 ```json
 {
   "dependencies": {
-    "com.ezoic.ads": "https://github.com/ezoic/ezoic-unity-sdk.git#v1.0.1"
+    "com.ezoic.ads": "https://github.com/ezoic/ezoic-unity-sdk.git#v1.9.0"
   }
 }
 ```
 
-The `#v1.0.1` suffix pins a released version; omit it to track the default branch.
+The `#v1.9.0` suffix pins a released version; omit it to track the default branch.
 
 ### 2. Provide the native Android library
 
-The Android ads run on the native `com.ezoic.sdk:ezoic-ads-sdk:1.8.0` library, which is
+The Android ads run on the native `com.ezoic.sdk:ezoic-ads-sdk:1.9.0` library, which is
 published on Maven Central. You need to make that dependency available to your Android build
 in **one** of two ways.
 
@@ -60,7 +60,7 @@ Maven Central repository to the generated `Assets/Plugins/Android/mainTemplate.g
 
 ```gradle
 dependencies {
-    implementation 'com.ezoic.sdk:ezoic-ads-sdk:1.8.0'
+    implementation 'com.ezoic.sdk:ezoic-ads-sdk:1.9.0'
 }
 ```
 
@@ -97,7 +97,7 @@ You only need to make the pod available to the generated Xcode project in **one*
 **Option A — External Dependency Manager for Unity (EDM4U), recommended.**
 Install [EDM4U](https://github.com/googlesamples/unity-jar-resolver). This package ships an
 `Editor/EzoicDependencies.xml` manifest, so EDM4U's iOS Resolver automatically adds
-`pod 'EzoicAdsSDK', '~> 1.8.0'` to the generated Xcode project's `Podfile` and runs
+`pod 'EzoicAdsSDK', '~> 1.9.0'` to the generated Xcode project's `Podfile` and runs
 `pod install`. No further action needed.
 
 **Option B — Manual Podfile line.**
@@ -106,7 +106,7 @@ If you do not use EDM4U, build the Xcode project from Unity, then add the pod to
 
 ```ruby
 target 'UnityFramework' do
-  pod 'EzoicAdsSDK', '~> 1.8.0'
+  pod 'EzoicAdsSDK', '~> 1.9.0'
 end
 ```
 
@@ -164,10 +164,12 @@ using Ezoic.Ads;
 // adaptive banner anchored to the bottom of the screen (pass a size like "320x50" for fixed)
 var banner = new EzoicBannerAd(adUnitId: 12345, position: BannerPosition.Bottom);
 
-banner.OnLoaded     += () => banner.Show();
-banner.OnLoadFailed += error => Debug.LogWarning("Banner failed: " + error);
-banner.OnClicked    += () => Debug.Log("Banner clicked");
-banner.OnImpression += () => Debug.Log("Banner impression");
+banner.OnLoaded      += () => banner.Show();
+banner.OnLoadFailed  += error => Debug.LogWarning("Banner failed: " + error);
+banner.OnClicked     += () => Debug.Log("Banner clicked");
+banner.OnImpression  += () => Debug.Log("Banner impression");
+banner.OnSizeChanged += (width, height) => Debug.Log($"Banner size: {width}x{height}");
+banner.CollapseOnNoFill = true; // default: collapse the view after a terminal no-fill
 
 banner.Load();
 
@@ -286,7 +288,9 @@ platform that is not yet supported:
 
 Constructor `EzoicBannerAd(int adUnitId, BannerPosition position, string size = null)`
 (`size` such as `"320x50"`; `null` requests an adaptive banner). Methods: `Load()`, `Show()`,
-`Hide()`, `Destroy()`. Events: `OnLoaded`, `OnLoadFailed(string)`, `OnClicked`, `OnImpression`.
+`Hide()`, `Destroy()`. Property: `CollapseOnNoFill` (default `true`) collapses the view after a
+terminal no-fill when nothing is displayed. Events: `OnLoaded`, `OnLoadFailed(string)`,
+`OnClicked`, `OnImpression`, `OnSizeChanged(int width, int height)` (dp/pt; `0, 0` on collapse).
 
 ### `EzoicInterstitialAd`
 

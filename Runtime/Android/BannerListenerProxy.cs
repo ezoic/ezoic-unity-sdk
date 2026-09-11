@@ -48,6 +48,13 @@ namespace Ezoic.Ads.Android
         {
             // No public event for close; implemented so the proxy handles every interface method.
         }
+
+        public void onBannerSizeChanged(AndroidJavaObject bannerView, int width, int height)
+        {
+            // Kotlin default methods compile to abstract interface methods for JNI proxies, so
+            // this must be implemented (like onBannerOpened / onBannerClosed) and forwarded.
+            EzoicMainThreadDispatcher.Enqueue(() => _owner.HandleSizeChanged(width, height));
+        }
     }
 }
 #endif

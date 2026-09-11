@@ -28,6 +28,26 @@ namespace Ezoic.Ads
         /// <summary>Raised when the banner records an impression.</summary>
         public event Action OnImpression;
 
+        /// <summary>
+        /// Raised when the displayed ad size changes: creative size in dp/pt after a successful
+        /// load, or <c>(0, 0)</c> when the view collapses after a terminal no-fill.
+        /// </summary>
+        public event Action<int, int> OnSizeChanged;
+
+        /// <summary>
+        /// When true (the default), the banner collapses after a terminal no-fill if nothing is
+        /// displayed. When false, the view keeps its last allocated size.
+        /// </summary>
+        public bool CollapseOnNoFill
+        {
+            get => _collapseOnNoFill;
+            set
+            {
+                _collapseOnNoFill = value;
+                ApplyCollapseOnNoFill(value);
+            }
+        }
+
         internal void RaiseLoaded() => OnLoaded?.Invoke();
 
         internal void RaiseLoadFailed(string error) => OnLoadFailed?.Invoke(error);
@@ -35,6 +55,10 @@ namespace Ezoic.Ads
         internal void RaiseClicked() => OnClicked?.Invoke();
 
         internal void RaiseImpression() => OnImpression?.Invoke();
+
+        internal void RaiseSizeChanged(int width, int height) => OnSizeChanged?.Invoke(width, height);
+
+        private bool _collapseOnNoFill = true;
 
 #if UNITY_ANDROID && !UNITY_EDITOR
         // android.view.View visibility constants.
@@ -52,6 +76,8 @@ namespace Ezoic.Ads
         private BannerListenerProxy _proxy;
         private volatile bool _destroyed;
         private volatile bool _createFailed;
+        private volatile bool _userHidden;
+        private volatile bool _collapsed;
 
         /// <summary>Creates a banner and adds it to the Activity content view at <paramref name="position"/>.</summary>
         /// <param name="adUnitId">Ezoic ad unit identifier.</param>
@@ -78,6 +104,7 @@ namespace Ezoic.Ads
                     var activity = AndroidBridge.Activity;
                     _view = new AndroidJavaObject(JniNames.EzoicBannerView.Class, activity, _adUnitId);
                     _view.Call(JniNames.EzoicBannerView.setListener, _proxy);
+                    _view.Call(JniNames.EzoicBannerView.setCollapseOnNoFill, _collapseOnNoFill);
 
                     var gravity = GravityFor(_position);
                     using (var layoutParams = new AndroidJavaObject(JniNames.Framework.FrameLayoutLayoutParams, WrapContent, WrapContent, gravity))
@@ -139,10 +166,57 @@ namespace Ezoic.Ads
         }
 
         /// <summary>Makes the banner visible. No-op after <see cref="Destroy"/>.</summary>
-        public void Show() => SetVisibility(VisibilityVisible);
+        public void Show()
+        {
+            _userHidden = false;
+            if (!_collapsed)
+            {
+                SetVisibility(VisibilityVisible);
+            }
+        }
 
         /// <summary>Hides the banner without destroying it. No-op after <see cref="Destroy"/>.</summary>
-        public void Hide() => SetVisibility(VisibilityGone);
+        public void Hide()
+        {
+            _userHidden = true;
+            SetVisibility(VisibilityGone);
+        }
+
+        internal void HandleSizeChanged(int width, int height)
+        {
+            _collapsed = height == 0;
+            if (!_userHidden && !_collapsed)
+            {
+                SetVisibility(VisibilityVisible);
+            }
+
+            RaiseSizeChanged(width, height);
+        }
+
+        private void ApplyCollapseOnNoFill(bool value)
+        {
+            if (_destroyed)
+            {
+                return;
+            }
+
+            AndroidBridge.RunOnUiThread(() =>
+            {
+                if (_destroyed || _view == null)
+                {
+                    return;
+                }
+
+                try
+                {
+                    _view.Call(JniNames.EzoicBannerView.setCollapseOnNoFill, value);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e);
+                }
+            });
+        }
 
         /// <summary>Stops loading, destroys the native view, and removes it from the view tree.</summary>
         public void Destroy()
@@ -234,6 +308,8 @@ namespace Ezoic.Ads
 #elif UNITY_IOS && !UNITY_EDITOR
         private readonly int _id;
         private volatile bool _destroyed;
+        private volatile bool _userHidden;
+        private volatile bool _collapsed;
 
         // Native -> managed event delivery. IosBridge invokes these on the Unity main thread
         // (inside an EzoicMainThreadDispatcher-enqueued action), so they raise the public events
@@ -243,6 +319,24 @@ namespace Ezoic.Ads
         internal void HandleLoadFailed(string error) => RaiseLoadFailed(error);
         internal void HandleClicked() => RaiseClicked();
         internal void HandleImpression() => RaiseImpression();
+
+        internal void HandleSizeChanged(int width, int height)
+        {
+            _collapsed = height == 0;
+            if (!_userHidden && !_collapsed)
+            {
+                try
+                {
+                    IosBridge.BannerShow(_id);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e);
+                }
+            }
+
+            RaiseSizeChanged(width, height);
+        }
 
         /// <summary>Creates a banner and adds it to the key window's root view at <paramref name="position"/>.</summary>
         /// <param name="adUnitId">Ezoic ad unit identifier.</param>
@@ -289,6 +383,12 @@ namespace Ezoic.Ads
                 return;
             }
 
+            _userHidden = false;
+            if (_collapsed)
+            {
+                return;
+            }
+
             try
             {
                 IosBridge.BannerShow(_id);
@@ -307,9 +407,27 @@ namespace Ezoic.Ads
                 return;
             }
 
+            _userHidden = true;
             try
             {
                 IosBridge.BannerHide(_id);
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+            }
+        }
+
+        private void ApplyCollapseOnNoFill(bool value)
+        {
+            if (_destroyed)
+            {
+                return;
+            }
+
+            try
+            {
+                IosBridge.BannerSetCollapseOnNoFill(_id, value);
             }
             catch (Exception e)
             {
@@ -369,6 +487,11 @@ namespace Ezoic.Ads
         /// <summary>No-op on unsupported platforms.</summary>
         public void Destroy()
         {
+        }
+
+        private void ApplyCollapseOnNoFill(bool value)
+        {
+            _ = value;
         }
 #endif
     }

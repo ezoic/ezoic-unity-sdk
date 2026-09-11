@@ -3,7 +3,7 @@
 //  Ezoic Ads SDK for Unity — iOS native bridge
 //
 //  C-ABI shim between the Unity C# runtime (Runtime/iOS/IosBridge.cs) and the
-//  published EzoicAdsSDK 1.8.0 xcframework. Every export is prefixed
+//  published EzoicAdsSDK 1.9.0 xcframework. Every export is prefixed
 //  `ezoic_unity_` and declared `@_cdecl` so IL2CPP can bind it via
 //  [DllImport("__Internal")]. The C# extern set and this export set are kept in
 //  lockstep by tools/audit-extern.py (name + parameter-count equality, both
@@ -47,6 +47,7 @@ import EzoicAdsSDK
 // parameters (a public function cannot use a less-accessible type).
 public typealias IdCallback = @convention(c) (Int32) -> Void
 public typealias IdMessageCallback = @convention(c) (Int32, UnsafePointer<CChar>?) -> Void
+public typealias IdSizeCallback = @convention(c) (Int32, Int32, Int32) -> Void
 public typealias IdRewardCallback = @convention(c) (Int32, UnsafePointer<CChar>?, Int32) -> Void
 
 // MARK: - Stored callbacks (main-thread only; see threading invariant).
@@ -61,6 +62,7 @@ private var bannerLoadedCb: IdCallback?
 private var bannerLoadFailedCb: IdMessageCallback?
 private var bannerClickedCb: IdCallback?
 private var bannerImpressionCb: IdCallback?
+private var bannerSizeChangedCb: IdSizeCallback?
 
 private var interstitialLoadedCb: IdCallback?
 private var interstitialLoadFailedCb: IdMessageCallback?
@@ -88,6 +90,9 @@ private final class BannerEntry {
     let adapter: BannerDelegateAdapter
     let size: String?
     let position: Int32
+    var widthConstraint: NSLayoutConstraint?
+    var heightConstraint: NSLayoutConstraint?
+    var userHidden: Bool = false
     init(view: EzoicBannerView, adapter: BannerDelegateAdapter, size: String?, position: Int32) {
         self.view = view
         self.adapter = adapter
@@ -151,12 +156,13 @@ private func currentRootViewController() -> UIViewController? {
         ?? UIApplication.shared.windows.first?.rootViewController
 }
 
-/// Resolves the point dimensions to pin the banner container to. The SDK centers
-/// its inner GMA banner inside the outer EzoicBannerView, which is init'd at frame
-/// .zero and has no intrinsicContentSize, so without an explicit width/height the
-/// container collapses to 0×0 under position-only constraints. Parses the stored
-/// "320x50"-style size when present; otherwise mirrors EzoicBannerView's private
-/// adaptiveSize() (EzoicBannerView.swift:798-803).
+/// Resolves the point width to pin the banner container to before the first fill.
+/// The container starts at height 0 (mirroring Android's WRAP_CONTENT overlay, which
+/// measures 0 until a creative is added) and is resized from
+/// `bannerView(_:didChangeSize:)` once the SDK reports the displayed creative size, so
+/// an unfilled or not-yet-filled banner never reserves (or intercepts taps in) a blank
+/// strip. Parses the stored "320x50"-style size when present; otherwise mirrors
+/// EzoicBannerView's private adaptiveSize().
 private func bannerSize(from size: String?) -> CGSize {
     if let size = size, !size.isEmpty {
         let parts = size.split(separator: "x")
@@ -170,12 +176,14 @@ private func bannerSize(from size: String?) -> CGSize {
     return CGSize(width: 320, height: 50)
 }
 
-/// Adds the banner to the current root view with safe-area position constraints and
-/// explicit width/height (see bannerSize) if it is not already in the view tree.
+/// Adds the banner to the current root view with safe-area position constraints, an
+/// explicit width (see bannerSize) and a zero height that the size-changed delegate
+/// expands on fill, if it is not already in the view tree.
 /// Idempotent; resolves the host view at call time. Position ints match
 /// Ezoic.Ads.BannerPosition:
 /// Top=0, Bottom=1, TopLeft=2, TopRight=3, BottomLeft=4, BottomRight=5, Center=6.
-private func attachBannerIfNeeded(_ view: EzoicBannerView, position: Int32, size: String?) {
+private func attachBannerIfNeeded(_ entry: BannerEntry) {
+    let view = entry.view
     guard view.superview == nil else { return }
     guard let host = currentRootViewController()?.view else { return }
 
@@ -184,7 +192,7 @@ private func attachBannerIfNeeded(_ view: EzoicBannerView, position: Int32, size
 
     let guide = host.safeAreaLayoutGuide
     let positionConstraints: [NSLayoutConstraint]
-    switch position {
+    switch entry.position {
     case 0: // Top
         positionConstraints = [view.topAnchor.constraint(equalTo: guide.topAnchor),
                                view.centerXAnchor.constraint(equalTo: guide.centerXAnchor)]
@@ -208,11 +216,13 @@ private func attachBannerIfNeeded(_ view: EzoicBannerView, position: Int32, size
                                view.centerXAnchor.constraint(equalTo: guide.centerXAnchor)]
     }
 
-    let dimensions = bannerSize(from: size)
-    NSLayoutConstraint.activate(positionConstraints + [
-        view.widthAnchor.constraint(equalToConstant: dimensions.width),
-        view.heightAnchor.constraint(equalToConstant: dimensions.height),
-    ])
+    let dimensions = bannerSize(from: entry.size)
+    let widthConstraint = view.widthAnchor.constraint(equalToConstant: dimensions.width)
+    // Height 0 until the SDK reports a displayed creative via didChangeSize.
+    let heightConstraint = view.heightAnchor.constraint(equalToConstant: 0)
+    entry.widthConstraint = widthConstraint
+    entry.heightConstraint = heightConstraint
+    NSLayoutConstraint.activate(positionConstraints + [widthConstraint, heightConstraint])
 }
 
 // MARK: - Delegate adapters. Each holds only the Int32 instance id; the entry in
@@ -237,6 +247,16 @@ private final class BannerDelegateAdapter: EzoicBannerViewDelegate {
 
     func bannerViewDidRecordClick(_ bannerView: EzoicBannerView) {
         bannerClickedCb?(id)
+    }
+
+    func bannerView(_ bannerView: EzoicBannerView, didChangeSize size: CGSize) {
+        if let entry = bannerRegistry[id] {
+            entry.widthConstraint?.constant = size.width
+            entry.heightConstraint?.constant = size.height
+            // Visible iff !userHidden && !collapsed (height 0).
+            entry.view.isHidden = entry.userHidden || size.height == 0
+        }
+        bannerSizeChangedCb?(id, Int32(size.width.rounded()), Int32(size.height.rounded()))
     }
 }
 
@@ -307,11 +327,13 @@ public func ezoic_unity_init_set_callbacks(_ onSuccess: IdCallback?, _ onFailure
 public func ezoic_unity_banner_set_callbacks(_ onLoaded: IdCallback?,
                                              _ onLoadFailed: IdMessageCallback?,
                                              _ onClicked: IdCallback?,
-                                             _ onImpression: IdCallback?) {
+                                             _ onImpression: IdCallback?,
+                                             _ onSizeChanged: IdSizeCallback?) {
     bannerLoadedCb = onLoaded
     bannerLoadFailedCb = onLoadFailed
     bannerClickedCb = onClicked
     bannerImpressionCb = onImpression
+    bannerSizeChangedCb = onSizeChanged
 }
 
 @_cdecl("ezoic_unity_interstitial_set_callbacks")
@@ -428,8 +450,9 @@ public func ezoic_unity_banner_create(_ id: Int32,
         let view = EzoicBannerView(adUnitIdentifier: Int(adUnitId))
         let adapter = BannerDelegateAdapter(id: id)
         view.delegate = adapter
-        bannerRegistry[id] = BannerEntry(view: view, adapter: adapter, size: sizeString, position: position)
-        attachBannerIfNeeded(view, position: position, size: sizeString)
+        let entry = BannerEntry(view: view, adapter: adapter, size: sizeString, position: position)
+        bannerRegistry[id] = entry
+        attachBannerIfNeeded(entry)
     }
 }
 
@@ -443,7 +466,7 @@ public func ezoic_unity_banner_load(_ id: Int32) {
         // The key window's root VC may not have existed at create time; attach
         // now if still detached. attachBannerIfNeeded is idempotent and a no-op
         // once the view is in the hierarchy.
-        attachBannerIfNeeded(entry.view, position: entry.position, size: entry.size)
+        attachBannerIfNeeded(entry)
         // If no root VC was available the view is still detached; loading would
         // succeed with nothing on screen. Report a non-terminal load failure and
         // keep the instance registered so a later Load() can retry once a root VC
@@ -464,7 +487,9 @@ public func ezoic_unity_banner_load(_ id: Int32) {
 public func ezoic_unity_banner_show(_ id: Int32) {
     DispatchQueue.main.async {
         guard let entry = bannerRegistry[id] else { return }
-        entry.view.isHidden = false
+        entry.userHidden = false
+        // Do not force-visible a collapsed native view.
+        entry.view.isHidden = entry.view.isCollapsed
     }
 }
 
@@ -472,7 +497,15 @@ public func ezoic_unity_banner_show(_ id: Int32) {
 public func ezoic_unity_banner_hide(_ id: Int32) {
     DispatchQueue.main.async {
         guard let entry = bannerRegistry[id] else { return }
+        entry.userHidden = true
         entry.view.isHidden = true
+    }
+}
+
+@_cdecl("ezoic_unity_banner_set_collapse_on_no_fill")
+public func ezoic_unity_banner_set_collapse_on_no_fill(_ id: Int32, _ collapse: Int32) {
+    DispatchQueue.main.async {
+        bannerRegistry[id]?.view.collapseOnNoFill = collapse != 0
     }
 }
 
