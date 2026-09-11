@@ -229,6 +229,7 @@ namespace Ezoic.Ads.Samples
                 _banner.OnLoadFailed += OnBannerLoadFailed;
                 _banner.OnClicked += OnBannerClicked;
                 _banner.OnImpression += OnBannerImpression;
+                _banner.OnSizeChanged += OnBannerSizeChanged;
                 Log("Banner: created (bottom, adaptive).");
             }
 
@@ -271,6 +272,7 @@ namespace Ezoic.Ads.Samples
             _banner.OnLoadFailed -= OnBannerLoadFailed;
             _banner.OnClicked -= OnBannerClicked;
             _banner.OnImpression -= OnBannerImpression;
+            _banner.OnSizeChanged -= OnBannerSizeChanged;
             _banner.Destroy();
             _banner = null;
             Log("Banner: Destroy().");
@@ -298,6 +300,11 @@ namespace Ezoic.Ads.Samples
         private void OnBannerImpression()
         {
             Log("Banner event: OnImpression.");
+        }
+
+        private void OnBannerSizeChanged(int width, int height)
+        {
+            Log("Banner event: OnSizeChanged — " + width + "x" + height + ".");
         }
 
         // --- Interstitial ----------------------------------------------------

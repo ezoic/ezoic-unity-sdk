@@ -71,6 +71,8 @@ namespace Ezoic.Ads.iOS
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate void IdMessageCallback(int id, IntPtr message);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate void IdSizeCallback(int id, int width, int height);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate void IdRewardCallback(int id, IntPtr rewardType, int amount);
 
         // ---- Kept-alive delegate instances. Static readonly roots them for the app lifetime so
@@ -84,6 +86,7 @@ namespace Ezoic.Ads.iOS
         private static readonly IdMessageCallback _bannerLoadFailed = OnBannerLoadFailed;
         private static readonly IdCallback _bannerClicked = OnBannerClicked;
         private static readonly IdCallback _bannerImpression = OnBannerImpression;
+        private static readonly IdSizeCallback _bannerSizeChanged = OnBannerSizeChanged;
 
         private static readonly IdCallback _interstitialLoaded = OnInterstitialLoaded;
         private static readonly IdMessageCallback _interstitialLoadFailed = OnInterstitialLoadFailed;
@@ -127,7 +130,7 @@ namespace Ezoic.Ads.iOS
 
             _callbacksRegistered = true;
             ezoic_unity_init_set_callbacks(_initSuccess, _initFailure);
-            ezoic_unity_banner_set_callbacks(_bannerLoaded, _bannerLoadFailed, _bannerClicked, _bannerImpression);
+            ezoic_unity_banner_set_callbacks(_bannerLoaded, _bannerLoadFailed, _bannerClicked, _bannerImpression, _bannerSizeChanged);
             ezoic_unity_interstitial_set_callbacks(
                 _interstitialLoaded, _interstitialLoadFailed, _interstitialShown, _interstitialFailedToShow,
                 _interstitialDismissed, _interstitialImpression, _interstitialClicked);
@@ -204,6 +207,8 @@ namespace Ezoic.Ads.iOS
         internal static void BannerShow(int id) => ezoic_unity_banner_show(id);
         internal static void BannerHide(int id) => ezoic_unity_banner_hide(id);
         internal static void BannerDestroy(int id) => ezoic_unity_banner_destroy(id);
+        internal static void BannerSetCollapseOnNoFill(int id, bool collapse) =>
+            ezoic_unity_banner_set_collapse_on_no_fill(id, collapse ? 1 : 0);
 
         internal static void InterstitialLoad(int id, int adUnitId)
         {
@@ -289,6 +294,15 @@ namespace Ezoic.Ads.iOS
             EzoicMainThreadDispatcher.Enqueue(() =>
             {
                 if (Banners.TryGetValue(id, out var ad)) { ad.HandleImpression(); }
+            });
+        }
+
+        [AOT.MonoPInvokeCallback(typeof(IdSizeCallback))]
+        private static void OnBannerSizeChanged(int id, int width, int height)
+        {
+            EzoicMainThreadDispatcher.Enqueue(() =>
+            {
+                if (Banners.TryGetValue(id, out var ad)) { ad.HandleSizeChanged(width, height); }
             });
         }
 
@@ -440,7 +454,7 @@ namespace Ezoic.Ads.iOS
         private static extern void ezoic_unity_init_set_callbacks(IdCallback onSuccess, IdMessageCallback onFailure);
 
         [DllImport("__Internal", EntryPoint = "ezoic_unity_banner_set_callbacks")]
-        private static extern void ezoic_unity_banner_set_callbacks(IdCallback onLoaded, IdMessageCallback onLoadFailed, IdCallback onClicked, IdCallback onImpression);
+        private static extern void ezoic_unity_banner_set_callbacks(IdCallback onLoaded, IdMessageCallback onLoadFailed, IdCallback onClicked, IdCallback onImpression, IdSizeCallback onSizeChanged);
 
         [DllImport("__Internal", EntryPoint = "ezoic_unity_interstitial_set_callbacks")]
         private static extern void ezoic_unity_interstitial_set_callbacks(IdCallback onLoaded, IdMessageCallback onLoadFailed, IdCallback onShown, IdMessageCallback onFailedToShow, IdCallback onDismissed, IdCallback onImpression, IdCallback onClicked);
@@ -483,6 +497,9 @@ namespace Ezoic.Ads.iOS
 
         [DllImport("__Internal", EntryPoint = "ezoic_unity_banner_destroy")]
         private static extern void ezoic_unity_banner_destroy(int id);
+
+        [DllImport("__Internal", EntryPoint = "ezoic_unity_banner_set_collapse_on_no_fill")]
+        private static extern void ezoic_unity_banner_set_collapse_on_no_fill(int id, int collapse);
 
         [DllImport("__Internal", EntryPoint = "ezoic_unity_interstitial_load")]
         private static extern void ezoic_unity_interstitial_load(int id, int adUnitId);

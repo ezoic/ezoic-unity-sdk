@@ -48,6 +48,7 @@ namespace Ezoic.Ads.Android
         {
             internal const string Class = "com.ezoic.ads.sdk.adunits.EzoicBannerView";
             internal const string setListener = "setListener";
+            internal const string setCollapseOnNoFill = "setCollapseOnNoFill";
             internal const string loadAd = "loadAd";
             internal const string stopLoading = "stopLoading";
             internal const string destroy = "destroy";
@@ -62,6 +63,7 @@ namespace Ezoic.Ads.Android
             internal const string onBannerClicked = "onBannerClicked";
             internal const string onBannerOpened = "onBannerOpened";
             internal const string onBannerClosed = "onBannerClosed";
+            internal const string onBannerSizeChanged = "onBannerSizeChanged";
         }
 
         internal static class EzoicInterstitialAd

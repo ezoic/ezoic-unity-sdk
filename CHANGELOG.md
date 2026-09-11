@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-09-11
+
+### Added
+
+- `EzoicBannerAd.CollapseOnNoFill` (default `true`) and `OnSizeChanged(int width, int height)` so unfilled banners collapse instead of leaving a blank hole. Native SDKs keep the previous creative on screen through a failed refresh.
+
+### Changed
+
+- Bump native Ezoic Ads SDK pins to 1.9.0.
+- iOS: the banner overlay now starts at zero height and is sized from the native SDK's size-changed callback once a creative fills (matching Android's `WRAP_CONTENT` overlay), so an unfilled banner no longer reserves or intercepts taps in a blank strip.
+
 ## [1.8.0] - 2026-09-08
 
 ### Changed
@@ -80,7 +91,8 @@ Initial release.
   it logs a one-line warning and delivers load callbacks as failures so game code
   runs unchanged.
 
-[Unreleased]: https://github.com/ezoic/ezoic-unity-sdk/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/ezoic/ezoic-unity-sdk/compare/v1.9.0...HEAD
+[1.9.0]: https://github.com/ezoic/ezoic-unity-sdk/releases/tag/v1.9.0
 [1.0.1]: https://github.com/ezoic/ezoic-unity-sdk/releases/tag/v1.0.1
 [1.0.0]: https://github.com/ezoic/ezoic-unity-sdk/releases/tag/v1.0.0
 [0.1.0]: https://github.com/ezoic/ezoic-unity-sdk/releases/tag/0.1.0
