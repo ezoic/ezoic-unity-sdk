@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.1] - 2026-09-14
+
+### Fixed
+- Impression reporting: the impression event now reports the ad unit path without the network-code prefix, so rendered app impressions are counted correctly in Ezoic reporting. Native pins bumped to `com.ezoic.sdk:ezoic-ads-sdk:1.10.1` / `EzoicAdsSDK ~> 1.10.1`. No Unity API change.
+
 ## [1.10.0] - 2026-09-11
 
 ### Changed
