@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.11.0] - 2026-09-23
+
+### Changed
+- Rewarded reports can include the reward name, and a close before the reward is granted. The native SDK sends those reports. No Unity API change. Native pins bumped to `com.ezoic.sdk:ezoic-ads-sdk:1.11.0` / `EzoicAdsSDK ~> 1.11.0`.
+
 ## [1.10.1] - 2026-09-14
 
 ### Fixed
