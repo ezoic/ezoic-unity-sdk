@@ -7,14 +7,14 @@ namespace Ezoic.Ads.Android
     /// <summary>
     /// <c>AndroidJavaProxy</c> for <c>com.ezoic.ads.sdk.core.EzoicCallback</c> (SDK init result).
     /// Callbacks arrive on the Android UI thread; the supplied delegates are responsible for
-    /// marshaling to the Unity main thread.
+    /// marshaling to the Unity main thread. Errors are delivered as <c>(code, message)</c>.
     /// </summary>
     internal sealed class EzoicCallbackProxy : AndroidJavaProxy
     {
         private readonly Action _onSuccess;
-        private readonly Action<string> _onError;
+        private readonly Action<int, string> _onError;
 
-        internal EzoicCallbackProxy(Action onSuccess, Action<string> onError)
+        internal EzoicCallbackProxy(Action onSuccess, Action<int, string> onError)
             : base(JniNames.EzoicCallback.Class)
         {
             _onSuccess = onSuccess;
@@ -28,8 +28,9 @@ namespace Ezoic.Ads.Android
 
         public void onError(AndroidJavaObject error)
         {
+            var code = AndroidBridge.ErrorCode(error);
             var message = AndroidBridge.ErrorMessage(error);
-            _onError?.Invoke(message);
+            _onError?.Invoke(code, message);
         }
     }
 }

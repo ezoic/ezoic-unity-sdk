@@ -74,6 +74,8 @@ namespace Ezoic.Ads.iOS
         private delegate void IdSizeCallback(int id, int width, int height);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate void IdRewardCallback(int id, IntPtr rewardType, int amount);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate void IdConsentCallback(int id, int outcome, int decision, IntPtr error);
 
         // ---- Kept-alive delegate instances. Static readonly roots them for the app lifetime so
         // the function pointers handed to the Swift set_callbacks exports never dangle (IL2CPP
@@ -81,6 +83,8 @@ namespace Ezoic.Ads.iOS
 
         private static readonly IdCallback _initSuccess = OnInitSuccess;
         private static readonly IdMessageCallback _initFailure = OnInitFailure;
+
+        private static readonly IdConsentCallback _consentResult = OnConsentResult;
 
         private static readonly IdCallback _bannerLoaded = OnBannerLoaded;
         private static readonly IdMessageCallback _bannerLoadFailed = OnBannerLoadFailed;
@@ -115,6 +119,10 @@ namespace Ezoic.Ads.iOS
         private static readonly ConcurrentDictionary<int, (Action onSuccess, Action<string> onFailure)> _pendingInit =
             new ConcurrentDictionary<int, (Action onSuccess, Action<string> onFailure)>();
 
+        // Pending consent-dialog completions, keyed by a per-call id like _pendingInit.
+        private static readonly ConcurrentDictionary<int, Action<ConsentResult>> _pendingConsent =
+            new ConcurrentDictionary<int, Action<ConsentResult>>();
+
         // ---- One-time callback registration. Called from the Unity main thread before the first
         // native call, so the plain bool guard needs no locking (same contract as
         // EzoicMainThreadDispatcher.Init). ----
@@ -130,6 +138,7 @@ namespace Ezoic.Ads.iOS
 
             _callbacksRegistered = true;
             ezoic_unity_init_set_callbacks(_initSuccess, _initFailure);
+            ezoic_unity_consent_set_callbacks(_consentResult);
             ezoic_unity_banner_set_callbacks(_bannerLoaded, _bannerLoadFailed, _bannerClicked, _bannerImpression, _bannerSizeChanged);
             ezoic_unity_interstitial_set_callbacks(
                 _interstitialLoaded, _interstitialLoadFailed, _interstitialShown, _interstitialFailedToShow,
@@ -142,12 +151,40 @@ namespace Ezoic.Ads.iOS
         // ---- High-level entry points used by the managed ad classes. Each ensures callbacks are
         // registered, then forwards to the native export. bool crosses the ABI as Int32. ----
 
-        internal static void Initialize(string domain, Action onSuccess, Action<string> onFailure)
+        internal static void Initialize(string domain, bool cmpEnabled, Action onSuccess, Action<string> onFailure)
         {
             EnsureCallbacksRegistered();
             var callId = NextId();
             _pendingInit[callId] = (onSuccess, onFailure);
-            ezoic_unity_init(callId, domain);
+            ezoic_unity_init(callId, domain, cmpEnabled ? 1 : 0);
+        }
+
+        internal static void PresentConsent(bool settings, Action<ConsentResult> onComplete)
+        {
+            EnsureCallbacksRegistered();
+            var callId = NextId();
+            _pendingConsent[callId] = onComplete;
+            if (settings)
+            {
+                ezoic_unity_present_consent_settings(callId);
+            }
+            else
+            {
+                ezoic_unity_present_consent_if_required(callId);
+            }
+        }
+
+        internal static void ResetConsent()
+        {
+            EnsureCallbacksRegistered();
+            ezoic_unity_reset_consent();
+        }
+
+        /// <summary>Native tri-state: -1 unknown (null), 0 false, 1 true.</summary>
+        internal static bool? IsConsentRequired()
+        {
+            var value = ezoic_unity_is_consent_required();
+            return value < 0 ? (bool?)null : value != 0;
         }
 
         internal static void TrackPageview()
@@ -257,6 +294,19 @@ namespace Ezoic.Ads.iOS
             EzoicMainThreadDispatcher.Enqueue(() =>
             {
                 if (_pendingInit.TryRemove(id, out var cbs)) { cbs.onFailure?.Invoke(msg); }
+            });
+        }
+
+        [AOT.MonoPInvokeCallback(typeof(IdConsentCallback))]
+        private static void OnConsentResult(int id, int outcome, int decision, IntPtr error)
+        {
+            var msg = Copy(error);
+            EzoicMainThreadDispatcher.Enqueue(() =>
+            {
+                if (_pendingConsent.TryRemove(id, out var cb))
+                {
+                    cb?.Invoke(new ConsentResult((ConsentOutcome)outcome, (ConsentDecision)decision, msg));
+                }
             });
         }
 
@@ -462,8 +512,23 @@ namespace Ezoic.Ads.iOS
         [DllImport("__Internal", EntryPoint = "ezoic_unity_rewarded_set_callbacks")]
         private static extern void ezoic_unity_rewarded_set_callbacks(IdCallback onLoaded, IdMessageCallback onLoadFailed, IdCallback onShown, IdMessageCallback onFailedToShow, IdCallback onDismissed, IdCallback onImpression, IdCallback onClicked, IdRewardCallback onUserEarnedReward);
 
+        [DllImport("__Internal", EntryPoint = "ezoic_unity_consent_set_callbacks")]
+        private static extern void ezoic_unity_consent_set_callbacks(IdConsentCallback onResult);
+
         [DllImport("__Internal", EntryPoint = "ezoic_unity_init")]
-        private static extern void ezoic_unity_init(int callId, [MarshalAs(UnmanagedType.LPUTF8Str)] string domain);
+        private static extern void ezoic_unity_init(int callId, [MarshalAs(UnmanagedType.LPUTF8Str)] string domain, int cmpEnabled);
+
+        [DllImport("__Internal", EntryPoint = "ezoic_unity_present_consent_if_required")]
+        private static extern void ezoic_unity_present_consent_if_required(int callId);
+
+        [DllImport("__Internal", EntryPoint = "ezoic_unity_present_consent_settings")]
+        private static extern void ezoic_unity_present_consent_settings(int callId);
+
+        [DllImport("__Internal", EntryPoint = "ezoic_unity_reset_consent")]
+        private static extern void ezoic_unity_reset_consent();
+
+        [DllImport("__Internal", EntryPoint = "ezoic_unity_is_consent_required")]
+        private static extern int ezoic_unity_is_consent_required();
 
         [DllImport("__Internal", EntryPoint = "ezoic_unity_track_pageview")]
         private static extern void ezoic_unity_track_pageview();

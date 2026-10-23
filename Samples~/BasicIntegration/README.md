@@ -23,8 +23,11 @@ Unity copies the sample into `Assets/Samples/Ezoic Ads/<version>/Basic Integrati
 3. In the Inspector set:
    - **Domain** — your Ezoic-registered domain (e.g. `example.com`).
    - **Banner / Interstitial / Rewarded Ad Unit Id** — your Ezoic ad unit ids.
-4. Build to a device and use the on-screen buttons: **Initialize** first, then
-   load/show any ad type.
+4. Build to a device and use the on-screen buttons: **Initialize** first (it also
+   shows the consent dialog to users in GDPR regions), then load/show any ad type.
+   **Privacy settings** reopens the consent dialog; **Reset consent** clears the
+   stored decision, so ads wait for a new decision and the dialog shows again on
+   the next launch.
 
 ## Platform notes
 

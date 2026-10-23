@@ -13,14 +13,14 @@ import PackageDescription
 let package = Package(
     name: "EzoicUnityBridgeCheck",
     platforms: [
-        .iOS(.v14)
+        .iOS(.v15)
     ],
     dependencies: [
         .package(
-            // Matches Editor/EzoicDependencies.xml's `~> 1.11.0` (CocoaPods optimistic
-            // operator) so CI type-checks the same 1.11.x range the pod can resolve to.
+            // Matches Editor/EzoicDependencies.xml's `~> 1.19.0` (CocoaPods optimistic
+            // operator) so CI type-checks the same 1.18.x range the pod can resolve to.
             url: "https://github.com/ezoic/ezoic-swift-sdk-dist",
-            .upToNextMinor(from: "1.11.0")
+            .upToNextMinor(from: "1.19.0")
         )
     ],
     targets: [

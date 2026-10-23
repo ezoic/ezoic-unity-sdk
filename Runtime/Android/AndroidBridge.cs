@@ -85,6 +85,27 @@ namespace Ezoic.Ads.Android
             }
         }
 
+        /// <summary>
+        /// Returns an <c>EzoicError</c>'s numeric code (e.g. 1002 for AlreadyInitialized), or -1
+        /// when it cannot be read. Must be called while the passed reference is still valid.
+        /// </summary>
+        internal static int ErrorCode(AndroidJavaObject error)
+        {
+            if (error == null)
+            {
+                return -1;
+            }
+
+            try
+            {
+                return error.Call<int>(JniNames.EzoicError.getCode);
+            }
+            catch (Exception)
+            {
+                return -1;
+            }
+        }
+
         /// <summary>Roots an object so it is not garbage collected while native code holds it.</summary>
         internal static void Retain(object handle)
         {

@@ -3,7 +3,7 @@
 //  Ezoic Ads SDK for Unity — iOS native bridge
 //
 //  C-ABI shim between the Unity C# runtime (Runtime/iOS/IosBridge.cs) and the
-//  published EzoicAdsSDK 1.9.0 xcframework. Every export is prefixed
+//  published EzoicAdsSDK xcframework. Every export is prefixed
 //  `ezoic_unity_` and declared `@_cdecl` so IL2CPP can bind it via
 //  [DllImport("__Internal")]. The C# extern set and this export set are kept in
 //  lockstep by tools/audit-extern.py (name + parameter-count equality, both
@@ -38,7 +38,13 @@
 
 import Foundation
 import UIKit
+// The CocoaPod (EDM4U / Podfile installs) vends only EzoicAdsSDKBinary; a source
+// build of ezoic-swift-sdk vends only EzoicAdsSDK.
+#if canImport(EzoicAdsSDKBinary)
+import EzoicAdsSDKBinary
+#else
 import EzoicAdsSDK
+#endif
 
 // MARK: - Callback function-pointer types (kept comma-free so the extern audit
 // can count parameters by top-level commas alone).
@@ -49,6 +55,7 @@ public typealias IdCallback = @convention(c) (Int32) -> Void
 public typealias IdMessageCallback = @convention(c) (Int32, UnsafePointer<CChar>?) -> Void
 public typealias IdSizeCallback = @convention(c) (Int32, Int32, Int32) -> Void
 public typealias IdRewardCallback = @convention(c) (Int32, UnsafePointer<CChar>?, Int32) -> Void
+public typealias IdConsentCallback = @convention(c) (Int32, Int32, Int32, UnsafePointer<CChar>?) -> Void
 
 // MARK: - Stored callbacks (main-thread only; see threading invariant).
 
@@ -57,6 +64,9 @@ public typealias IdRewardCallback = @convention(c) (Int32, UnsafePointer<CChar>?
 // failure -> IdMessageCallback.
 private var initSuccessCb: IdCallback?
 private var initFailureCb: IdMessageCallback?
+
+// Consent-dialog completions carry the C#-allocated call id (see IosBridge._pendingConsent).
+private var consentResultCb: IdConsentCallback?
 
 private var bannerLoadedCb: IdCallback?
 private var bannerLoadFailedCb: IdMessageCallback?
@@ -141,6 +151,45 @@ private func fire(_ cb: IdMessageCallback?, _ id: Int32, _ message: String) {
     message.withCString { cb(id, $0) }
 }
 
+/// Forwards a consent outcome to C#. The ints match Ezoic.Ads.ConsentOutcome
+/// (NotRequired=0, AlreadyDecided=1, Decided=2, Dismissed=3, AlreadyPresenting=4,
+/// Failed=5) and Ezoic.Ads.ConsentDecision (None=0, AcceptAll=1, RejectAll=2, Custom=3).
+private func fireConsent(_ callId: Int32, _ outcome: ConsentOutcome) {
+    guard let cb = consentResultCb else { return }
+    var decision: Int32 = 0
+    var error: String?
+    let code: Int32
+    switch outcome {
+    case .notRequired:
+        code = 0
+    case .alreadyDecided:
+        code = 1
+    case .decided(let type):
+        code = 2
+        switch type {
+        case .acceptAll: decision = 1
+        case .rejectAll: decision = 2
+        case .custom: decision = 3
+        @unknown default: decision = 0
+        }
+    case .dismissed:
+        code = 3
+    case .alreadyPresenting:
+        code = 4
+    case .failed(let failure):
+        code = 5
+        error = failure.localizedDescription
+    @unknown default:
+        // An outcome added by a newer native SDK: closed without a known choice.
+        code = 3
+    }
+    if let error = error {
+        error.withCString { cb(callId, code, decision, $0) }
+    } else {
+        cb(callId, code, decision, nil)
+    }
+}
+
 /// Resolves the current key window's root view controller at call time (never
 /// cached — the root VC can change across scene/window transitions).
 private func currentRootViewController() -> UIViewController? {
@@ -151,9 +200,9 @@ private func currentRootViewController() -> UIViewController? {
             return root
         }
     }
-    // Legacy fallback for hosts without an active UIWindowScene yet.
-    return UIApplication.shared.windows.first(where: { $0.isKeyWindow })?.rootViewController
-        ?? UIApplication.shared.windows.first?.rootViewController
+    // Fallback for hosts without an active UIWindowScene yet (UnityAppController
+    // exposes its window through the app delegate).
+    return UIApplication.shared.delegate?.window??.rootViewController
 }
 
 /// Resolves the point width to pin the banner container to before the first fill.
@@ -323,6 +372,11 @@ public func ezoic_unity_init_set_callbacks(_ onSuccess: IdCallback?, _ onFailure
     initFailureCb = onFailure
 }
 
+@_cdecl("ezoic_unity_consent_set_callbacks")
+public func ezoic_unity_consent_set_callbacks(_ onResult: IdConsentCallback?) {
+    consentResultCb = onResult
+}
+
 @_cdecl("ezoic_unity_banner_set_callbacks")
 public func ezoic_unity_banner_set_callbacks(_ onLoaded: IdCallback?,
                                              _ onLoadFailed: IdMessageCallback?,
@@ -375,16 +429,18 @@ public func ezoic_unity_rewarded_set_callbacks(_ onLoaded: IdCallback?,
 // MARK: - SDK lifecycle / global.
 
 @_cdecl("ezoic_unity_init")
-public func ezoic_unity_init(_ callId: Int32, _ domain: UnsafePointer<CChar>?) {
+public func ezoic_unity_init(_ callId: Int32, _ domain: UnsafePointer<CChar>?, _ cmpEnabled: Int32) {
     let domainString = domain.map { String(cString: $0) } ?? ""
     DispatchQueue.main.async {
-        let configuration = EzoicConfiguration(domain: domainString)
+        let configuration = EzoicConfiguration(domain: domainString, cmpEnabled: cmpEnabled != 0)
         EzoicAds.shared.initialize(with: configuration) { result in
             // The SDK may complete off the main thread; re-hop so the callback
             // fires under the threading invariant.
             DispatchQueue.main.async {
                 switch result {
-                case .success:
+                // A repeat Initialize (e.g. after a scene reload) succeeds; the
+                // native SDK keeps the configuration from the first call.
+                case .success, .failure(.alreadyInitialized):
                     initSuccessCb?(callId)
                 case .failure(let error):
                     fire(initFailureCb, callId, error.localizedDescription)
@@ -423,6 +479,50 @@ public func ezoic_unity_set_subject_to_coppa(_ subject: Int32) {
     DispatchQueue.main.async {
         EzoicAds.shared.setSubjectToCOPPA(subject != 0)
     }
+}
+
+// MARK: - Consent (built-in TCF CMP).
+
+private func presentConsentDialog(_ callId: Int32, reopen: Bool) {
+    DispatchQueue.main.async {
+        // The SDK moves the dialog to the key window's top-most view controller if
+        // this one is presenting something else by the time the dialog is ready.
+        guard let host = currentRootViewController() else {
+            fireConsent(callId, .failed(.noRootViewController))
+            return
+        }
+        let completion: (ConsentOutcome) -> Void = { outcome in fireConsent(callId, outcome) }
+        if reopen {
+            EzoicAds.shared.presentConsentSettings(from: host, completion: completion)
+        } else {
+            EzoicAds.shared.presentConsentIfRequired(from: host, completion: completion)
+        }
+    }
+}
+
+@_cdecl("ezoic_unity_present_consent_if_required")
+public func ezoic_unity_present_consent_if_required(_ callId: Int32) {
+    presentConsentDialog(callId, reopen: false)
+}
+
+@_cdecl("ezoic_unity_present_consent_settings")
+public func ezoic_unity_present_consent_settings(_ callId: Int32) {
+    presentConsentDialog(callId, reopen: true)
+}
+
+@_cdecl("ezoic_unity_reset_consent")
+public func ezoic_unity_reset_consent() {
+    DispatchQueue.main.async {
+        EzoicAds.shared.resetConsent()
+    }
+}
+
+/// Synchronous tri-state read (-1 unknown, 0 false, 1 true). Touches no registry,
+/// callback, or UIKit object, and the SDK guards this state with its own lock.
+@_cdecl("ezoic_unity_is_consent_required")
+public func ezoic_unity_is_consent_required() -> Int32 {
+    guard let required = EzoicAds.shared.isConsentRequired else { return -1 }
+    return required ? 1 : 0
 }
 
 /// Returns a heap-allocated (strdup) UTF-8 copy of the SDK version. The caller

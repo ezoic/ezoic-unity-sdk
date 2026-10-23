@@ -96,6 +96,7 @@ namespace Ezoic.Ads.Samples
             GUILayout.Label("Initialized: " + EzoicAds.IsInitialized + "   |   SDK: " + Describe(EzoicAds.Version));
 
             DrawInitializeSection();
+            DrawConsentSection();
             DrawBannerSection();
             DrawInterstitialSection();
             DrawRewardedSection();
@@ -116,6 +117,26 @@ namespace Ezoic.Ads.Samples
                 Initialize();
             }
             GUI.enabled = true;
+        }
+
+        private void DrawConsentSection()
+        {
+            GUILayout.Space(6f);
+            bool? required = EzoicAds.IsConsentRequired;
+            GUILayout.Label("Consent required: " + (required.HasValue ? required.Value.ToString() : "unknown"));
+            GUILayout.BeginHorizontal();
+            // TCF requires an always-reachable way to reopen the consent dialog.
+            if (GUILayout.Button("Privacy settings"))
+            {
+                Log("PresentConsentSettings()…");
+                EzoicAds.PresentConsentSettings(result => Log("Consent settings: " + result));
+            }
+            if (GUILayout.Button("Reset consent"))
+            {
+                Log("ResetConsent().");
+                EzoicAds.ResetConsent();
+            }
+            GUILayout.EndHorizontal();
         }
 
         private void DrawBannerSection()
@@ -213,6 +234,16 @@ namespace Ezoic.Ads.Samples
                 else
                 {
                     Log("Initialize: FAILED — " + Describe(error));
+                }
+            });
+
+            // In GDPR regions ad loads fail until the user decides; this waits for
+            // initialization and only shows the dialog where it is required.
+            EzoicAds.PresentConsentIfRequired(result =>
+            {
+                if (!_disposed)
+                {
+                    Log("Consent: " + result);
                 }
             });
         }

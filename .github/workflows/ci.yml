@@ -74,10 +74,13 @@ jobs:
           java-version: '17'
 
       - name: Download AAR and extract classes
+        # Audits the exact version Editor/EzoicDependencies.xml pins.
         run: |
           set -euo pipefail
+          version="$(python3 -c "import xml.etree.ElementTree as ET; s = ET.parse('Editor/EzoicDependencies.xml').find('.//androidPackage').get('spec'); g, a, v = s.split(':'); assert (g, a) == ('com.ezoic.sdk', 'ezoic-ads-sdk'), s; print(v)")"
+          echo "Auditing com.ezoic.sdk:ezoic-ads-sdk:$version"
           curl -fL -o ezoic-ads-sdk.aar \
-            https://repo1.maven.org/maven2/com/ezoic/sdk/ezoic-ads-sdk/1.11.0/ezoic-ads-sdk-1.11.0.aar
+            "https://repo1.maven.org/maven2/com/ezoic/sdk/ezoic-ads-sdk/$version/ezoic-ads-sdk-$version.aar"
           unzip -o ezoic-ads-sdk.aar classes.jar -d aar_extract
           mkdir -p aar_classes
           (cd aar_classes && jar xf ../aar_extract/classes.jar)
@@ -85,12 +88,13 @@ jobs:
       - name: Run JNI signature audit
         run: AAR_CLASSES="$PWD/aar_classes" python3 tools/audit-jni.py
 
-  # Type-check Runtime/Plugins/iOS/*.swift against the real published EzoicAdsSDK
-  # API (the same 1.11.0 dist package Unity resolves via CocoaPods) so a rename or
-  # signature drift in the native SDK breaks CI here rather than in a publisher's
-  # Xcode build. Compiles only — no simulator boot, no tests.
+  # Type-check Runtime/Plugins/iOS/*.swift against the SwiftPM distribution of
+  # EzoicAdsSDK (ezoic-swift-sdk-dist) so a rename or signature drift in the
+  # native SDK breaks CI here rather than in a publisher's Xcode build. Compiles
+  # only — no simulator boot, no tests. The cocoapods-bridge job covers the
+  # CocoaPod Unity actually installs.
   swift-bridge:
-    runs-on: macos-15
+    runs-on: macos-26
     # Cold checkout resolves and builds the EzoicAdsSDK dist graph (Prebid Mobile,
     # GMA) from source, so give the build generous headroom.
     timeout-minutes: 45
@@ -98,10 +102,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Select Xcode 16
-        # macos-15 ships Xcode 16.x as /Applications/Xcode.app; the resolved
-        # EzoicAdsSDK 1.11.0 package graph (objectVersion-77) requires Xcode 16.
-        run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+      - name: Select Xcode 26.6
+        # EzoicAdsSDK 1.15+ resolves Google Mobile Ads 13.x, which needs Xcode 26.2+.
+        run: sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
       - name: Show Xcode version
         run: xcodebuild -version
 
@@ -163,6 +166,36 @@ jobs:
             -destination 'generic/platform=iOS Simulator' \
             -skipPackagePluginValidation \
             COMPILER_INDEX_STORE_ENABLE=NO
+
+  # Compile Runtime/Plugins/iOS/*.swift against the published EzoicAdsSDK CocoaPod —
+  # the artifact EDM4U installs into a Unity Xcode project, whose Swift module is
+  # `EzoicAdsSDKBinary` — at the version Editor/EzoicDependencies.xml pins.
+  cocoapods-bridge:
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Select Xcode 26.6
+        run: sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Install the pod
+        working-directory: tools/cocoapods-check~
+        run: pod install --repo-update
+
+      - name: Build the Swift bridge for the iOS simulator
+        working-directory: tools/cocoapods-check~
+        run: >-
+          xcodebuild build
+          -workspace BridgeCheck.xcworkspace
+          -scheme EzoicUnityBridgeCheck
+          -destination 'generic/platform=iOS Simulator'
+          -derivedDataPath DerivedData
+          CODE_SIGNING_ALLOWED=NO
+          COMPILER_INDEX_STORE_ENABLE=NO
 
   # Assert the Swift @_cdecl export set and the C# [DllImport("__Internal")] extern
   # set are identical — same names, same parameter counts, both directions — so the

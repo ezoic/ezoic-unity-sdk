@@ -12,13 +12,26 @@ platform-agnostic.
 
 | Platform | Status |
 | --- | --- |
-| Android | Supported |
-| iOS | Supported (iOS 14+) |
+| Android | Supported (Minimum API Level 24, Target API Level 34+) |
+| iOS | Supported (iOS 15+, Xcode 26.2+) |
 | Editor / other platforms | API is callable and safe (see [Editor behavior](#editor-and-unsupported-platforms)) |
 
 On Android the API calls the native `com.ezoic.sdk:ezoic-ads-sdk` library; on iOS it calls the
 native `EzoicAdsSDK` CocoaPod. On every other platform the same calls compile and run as safe
 no-ops, so you can develop and play in the editor without any platform guards in your game code.
+
+### Native SDK versions and requirements
+
+| | Android | iOS |
+| --- | --- | --- |
+| Native Ezoic SDK | `com.ezoic.sdk:ezoic-ads-sdk:1.19.0` | `EzoicAdsSDK` pod `~> 1.19.0` |
+| Google Mobile Ads (pulled in transitively) | 25.x (`play-services-ads:25.2.0`) | 13.x |
+| Toolchain | Target API Level 34+ (the SDK depends on `androidx.browser:browser:1.8.0`, which needs compileSdk 34+) | Xcode 26.2+ (required by Google Mobile Ads 13.x) |
+| Minimum OS | Android 7.0 (API 24) | iOS 15.0 |
+
+If your project also uses the Google Mobile Ads Unity plugin or another package that pins
+Google Mobile Ads, use a release built on Google Mobile Ads Android 25.x / iOS 13.x so EDM4U
+can resolve a single version.
 
 ## Installation
 
@@ -27,7 +40,7 @@ no-ops, so you can develop and play in the editor without any platform guards in
 In Unity, open **Window → Package Manager → + → Add package from git URL…** and enter:
 
 ```
-https://github.com/ezoic/ezoic-unity-sdk.git#v1.11.0
+https://github.com/ezoic/ezoic-unity-sdk.git#v1.19.0
 ```
 
 Or add it to your project's `Packages/manifest.json` dependencies:
@@ -35,16 +48,16 @@ Or add it to your project's `Packages/manifest.json` dependencies:
 ```json
 {
   "dependencies": {
-    "com.ezoic.ads": "https://github.com/ezoic/ezoic-unity-sdk.git#v1.11.0"
+    "com.ezoic.ads": "https://github.com/ezoic/ezoic-unity-sdk.git#v1.19.0"
   }
 }
 ```
 
-The `#v1.11.0` suffix pins a released version; omit it to track the default branch.
+The `#v1.19.0` suffix pins a released version; omit it to track the default branch.
 
 ### 2. Provide the native Android library
 
-The Android ads run on the native `com.ezoic.sdk:ezoic-ads-sdk:1.11.0` library, which is
+The Android ads run on the native `com.ezoic.sdk:ezoic-ads-sdk:1.19.0` library, which is
 published on Maven Central. You need to make that dependency available to your Android build
 in **one** of two ways.
 
@@ -60,12 +73,15 @@ Maven Central repository to the generated `Assets/Plugins/Android/mainTemplate.g
 
 ```gradle
 dependencies {
-    implementation 'com.ezoic.sdk:ezoic-ads-sdk:1.11.0'
+    implementation 'com.ezoic.sdk:ezoic-ads-sdk:1.19.0'
 }
 ```
 
 Make sure `mavenCentral()` is listed in your project's repositories (in
 `settingsTemplate.gradle` or the app `build.gradle`, depending on your Gradle setup).
+
+Set **Minimum API Level** to 24 or higher and **Target API Level** to 34 or higher under
+**Project Settings → Player → Android → Other Settings**.
 
 ### 3. Configure the Android manifest (Google Ad Manager app ID)
 
@@ -89,7 +105,7 @@ missing or incorrect app ID causes the app to crash on start.
 
 ### 4. Provide the native iOS library
 
-iOS ads run on the native `EzoicAdsSDK` CocoaPod (requires **iOS 14+**). Unity automatically
+iOS ads run on the native `EzoicAdsSDK` CocoaPod (requires **iOS 15+** and **Xcode 26.2+**). Unity automatically
 adds this package's Swift bridge (`Runtime/Plugins/iOS/EzoicAdsUnityBridge.swift`) to the
 generated Xcode project as a native plugin — you do not copy or configure any source yourself.
 You only need to make the pod available to the generated Xcode project in **one** of two ways.
@@ -97,7 +113,7 @@ You only need to make the pod available to the generated Xcode project in **one*
 **Option A — External Dependency Manager for Unity (EDM4U), recommended.**
 Install [EDM4U](https://github.com/googlesamples/unity-jar-resolver). This package ships an
 `Editor/EzoicDependencies.xml` manifest, so EDM4U's iOS Resolver automatically adds
-`pod 'EzoicAdsSDK', '~> 1.11.0'` to the generated Xcode project's `Podfile` and runs
+`pod 'EzoicAdsSDK', '~> 1.19.0'` to the generated Xcode project's `Podfile` and runs
 `pod install`. No further action needed.
 
 **Option B — Manual Podfile line.**
@@ -106,11 +122,11 @@ If you do not use EDM4U, build the Xcode project from Unity, then add the pod to
 
 ```ruby
 target 'UnityFramework' do
-  pod 'EzoicAdsSDK', '~> 1.11.0'
+  pod 'EzoicAdsSDK', '~> 1.19.0'
 end
 ```
 
-Set the iOS Deployment Target to **14.0 or higher** under
+Set the iOS Deployment Target to **15.0 or higher** under
 **Project Settings → Player → iOS → Other Settings → Target minimum iOS Version**.
 
 ## Quick start
@@ -147,13 +163,59 @@ public class AdsBootstrap : MonoBehaviour
 }
 ```
 
-Privacy and consent helpers can be called any time after initialization:
+Signal a new screen / pageview at any time after initialization:
+
+```csharp
+EzoicAds.TrackPageview();
+```
+
+### Privacy and consent (GDPR)
+
+The native SDK includes an IAB TCF consent dialog (CMP), **on by default**. It only does
+anything for users in GDPR regions; elsewhere nothing is shown and ads load as usual. In GDPR
+regions, ad loads wait for the user's decision and then fail without one, so:
+
+1. **Ask for consent once per launch, right after `Initialize`.** You don't need to wait for
+   the init callback; the request waits for initialization to finish.
+2. **Add an always-reachable "Privacy settings" button** that calls `PresentConsentSettings`.
+   TCF policy requires users to be able to change or withdraw consent at any time.
+
+```csharp
+EzoicAds.Initialize("example.com", (success, error) => { /* ... */ });
+
+EzoicAds.PresentConsentIfRequired(result =>
+{
+    // result.Outcome: NotRequired, AlreadyDecided, Decided (see result.Decision),
+    // Dismissed (ask again later), AlreadyPresenting, or Failed (see result.Error).
+    Debug.Log("Consent: " + result);
+});
+
+// "Privacy settings" button handler:
+EzoicAds.PresentConsentSettings(result => Debug.Log("Consent settings: " + result));
+
+// Show the button only where it applies (null until initialization completes):
+bool showPrivacyButton = EzoicAds.IsConsentRequired == true;
+```
+
+Calling `PresentConsentIfRequired` again is harmless: it reports `AlreadyPresenting` while a
+dialog is open and `AlreadyDecided` once a valid decision is stored. Call it again after a
+`Dismissed` or `Failed` outcome to re-ask.
+
+**If your app already runs another CMP** (Google UMP, OneTrust, …), turn the built-in dialog off;
+the SDK then reads that CMP's `IABTCF_*` values:
+
+```csharp
+EzoicAds.Initialize(new EzoicConfiguration("example.com") { CmpEnabled = false }, (success, error) => { /* ... */ });
+```
+
+**Manual consent.** You can also pass consent signals yourself. `SetGDPRConsent` makes the
+built-in dialog stand down, but only for the current launch, so call it **before**
+`Initialize` on every launch (or set `CmpEnabled = false`):
 
 ```csharp
 EzoicAds.SetGDPRConsent(true, tcfConsentString);
 EzoicAds.SetGPPConsent(gppString, "7");   // applicable GPP section IDs
 EzoicAds.SetSubjectToCOPPA(false);
-EzoicAds.TrackPageview();                  // signal a new screen / pageview
 ```
 
 ### Banner ad
@@ -268,7 +330,10 @@ platform that is not yet supported:
 - Load calls (`EzoicBannerAd.Load`, `EzoicInterstitialAd.Load`, `EzoicRewardedAd.Load`) and
   `EzoicAds.Initialize` deliver their failure callback asynchronously, so your event wiring and
   game flow behave the same as on device — you just get a failure instead of a fill.
-- `EzoicAds.IsInitialized` is `false` and `EzoicAds.Version` is an empty string.
+- `EzoicAds.PresentConsentIfRequired` and `EzoicAds.PresentConsentSettings` deliver a
+  `ConsentOutcome.Failed` result asynchronously.
+- `EzoicAds.IsInitialized` is `false`, `EzoicAds.IsConsentRequired` is `null`, and
+  `EzoicAds.Version` is an empty string.
 
 ## API reference
 
@@ -276,13 +341,23 @@ platform that is not yet supported:
 
 | Member | Description |
 | --- | --- |
-| `Initialize(string domain, Action<bool, string> onComplete = null)` | Initialize the SDK for your domain. The callback reports `(success, error)`. |
+| `Initialize(string domain, Action<bool, string> onComplete = null)` | Initialize the SDK for your domain. The callback reports `(success, error)`. Calling it again after a successful initialization (e.g. from a reloaded scene) reports success; the native SDK keeps the configuration from the first call. |
+| `Initialize(EzoicConfiguration configuration, Action<bool, string> onComplete = null)` | Same, with options. `EzoicConfiguration(string domain)` has `CmpEnabled` (default `true`; set `false` if you run your own CMP). |
 | `IsInitialized` | `true` once initialization succeeds. |
 | `TrackPageview()` | Signal a new pageview / screen. |
-| `SetGDPRConsent(bool applies, string consentString)` | Set GDPR/TCF consent. |
+| `PresentConsentIfRequired(Action<ConsentResult> onComplete = null)` | Show the built-in consent dialog if this user must decide. Call once per launch right after `Initialize`. |
+| `PresentConsentSettings(Action<ConsentResult> onComplete = null)` | Reopen the consent dialog so the user can change their choices (wire to a "Privacy settings" button). |
+| `IsConsentRequired` | `bool?`: `true` when GDPR applies and the built-in dialog is in charge; `null` until initialization completes. |
+| `ResetConsent()` | Delete the built-in dialog's stored decision so it is shown again. |
+| `SetGDPRConsent(bool applies, string consentString)` | Set GDPR/TCF consent manually (call before `Initialize`; the built-in dialog stands down for this launch). |
 | `SetGPPConsent(string gppString, string sectionIds)` | Set GPP consent. |
 | `SetSubjectToCOPPA(bool subject)` | Flag child-directed treatment. |
 | `Version` | Native SDK version string (empty on unsupported platforms). |
+
+`ConsentResult` has `Outcome` (`ConsentOutcome`: `NotRequired`, `AlreadyDecided`, `Decided`,
+`Dismissed`, `AlreadyPresenting`, `Failed`), `Decision` (`ConsentDecision`: `None`,
+`AcceptAll`, `RejectAll`, `Custom`; set when `Outcome` is `Decided`), and `Error` (set when
+`Outcome` is `Failed`). Consent callbacks run on the Unity main thread.
 
 ### `EzoicBannerAd`
 
