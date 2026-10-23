@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- iOS: the Swift bridge imported `EzoicAdsSDK`, but the `EzoicAdsSDK` CocoaPod (the EDM4U / Podfile install path) vends the module `EzoicAdsSDKBinary`, so Unity iOS builds failed to compile the bridge. It now imports `EzoicAdsSDKBinary` when available and falls back to `EzoicAdsSDK` (SwiftPM). CI now also compiles the bridge against the real CocoaPod.
+
 ## [1.11.0] - 2026-09-23
 
 ### Changed
