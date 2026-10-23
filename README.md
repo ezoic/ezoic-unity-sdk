@@ -24,7 +24,7 @@ no-ops, so you can develop and play in the editor without any platform guards in
 
 | | Android | iOS |
 | --- | --- | --- |
-| Native Ezoic SDK | `com.ezoic.sdk:ezoic-ads-sdk:1.19.0` | `EzoicAdsSDK` pod `~> 1.19.0` |
+| Native Ezoic SDK | `com.ezoic.sdk:ezoic-ads-sdk:1.19.1` | `EzoicAdsSDK` pod `~> 1.19.1` |
 | Google Mobile Ads (pulled in transitively) | 25.x (`play-services-ads:25.2.0`) | 13.x |
 | Toolchain | Target API Level 34+ (the SDK depends on `androidx.browser:browser:1.8.0`, which needs compileSdk 34+) | Xcode 26.2+ (required by Google Mobile Ads 13.x) |
 | Minimum OS | Android 7.0 (API 24) | iOS 15.0 |
@@ -40,7 +40,7 @@ can resolve a single version.
 In Unity, open **Window → Package Manager → + → Add package from git URL…** and enter:
 
 ```
-https://github.com/ezoic/ezoic-unity-sdk.git#v1.19.0
+https://github.com/ezoic/ezoic-unity-sdk.git#v1.19.1
 ```
 
 Or add it to your project's `Packages/manifest.json` dependencies:
@@ -48,16 +48,16 @@ Or add it to your project's `Packages/manifest.json` dependencies:
 ```json
 {
   "dependencies": {
-    "com.ezoic.ads": "https://github.com/ezoic/ezoic-unity-sdk.git#v1.19.0"
+    "com.ezoic.ads": "https://github.com/ezoic/ezoic-unity-sdk.git#v1.19.1"
   }
 }
 ```
 
-The `#v1.19.0` suffix pins a released version; omit it to track the default branch.
+The `#v1.19.1` suffix pins a released version; omit it to track the default branch.
 
 ### 2. Provide the native Android library
 
-The Android ads run on the native `com.ezoic.sdk:ezoic-ads-sdk:1.19.0` library, which is
+The Android ads run on the native `com.ezoic.sdk:ezoic-ads-sdk:1.19.1` library, which is
 published on Maven Central. You need to make that dependency available to your Android build
 in **one** of two ways.
 
@@ -73,7 +73,7 @@ Maven Central repository to the generated `Assets/Plugins/Android/mainTemplate.g
 
 ```gradle
 dependencies {
-    implementation 'com.ezoic.sdk:ezoic-ads-sdk:1.19.0'
+    implementation 'com.ezoic.sdk:ezoic-ads-sdk:1.19.1'
 }
 ```
 
@@ -113,7 +113,7 @@ You only need to make the pod available to the generated Xcode project in **one*
 **Option A — External Dependency Manager for Unity (EDM4U), recommended.**
 Install [EDM4U](https://github.com/googlesamples/unity-jar-resolver). This package ships an
 `Editor/EzoicDependencies.xml` manifest, so EDM4U's iOS Resolver automatically adds
-`pod 'EzoicAdsSDK', '~> 1.19.0'` to the generated Xcode project's `Podfile` and runs
+`pod 'EzoicAdsSDK', '~> 1.19.1'` to the generated Xcode project's `Podfile` and runs
 `pod install`. No further action needed.
 
 **Option B — Manual Podfile line.**
@@ -122,7 +122,7 @@ If you do not use EDM4U, build the Xcode project from Unity, then add the pod to
 
 ```ruby
 target 'UnityFramework' do
-  pod 'EzoicAdsSDK', '~> 1.19.0'
+  pod 'EzoicAdsSDK', '~> 1.19.1'
 end
 ```
 

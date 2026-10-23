@@ -5,6 +5,11 @@ All notable changes to the Ezoic Ads Unity SDK are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.19.1] - 2026-10-23
+
+### Fixed
+- Native SDK pins bumped to 1.19.1. Android release builds made with Android Gradle Plugin 9 no longer crash at startup with "Failed to create an instance of androidx.work.impl.WorkDatabase". On iOS, consent set with `SetGDPRConsent` / `SetGPPConsent` now reaches Google Mobile Ads, IMA and Amazon.
+
 ## [1.19.0] - 2026-10-23
 
 ### Added
