@@ -5,7 +5,7 @@ All notable changes to the Ezoic Ads Unity SDK are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.19.0] - 2026-10-23
 
 ### Added
 - Consent APIs for the native SDKs' built-in IAB TCF consent dialog (CMP): `EzoicAds.PresentConsentIfRequired(Action<ConsentResult>)`, `EzoicAds.PresentConsentSettings(Action<ConsentResult>)`, `EzoicAds.IsConsentRequired` and `EzoicAds.ResetConsent()`, with the `ConsentResult` / `ConsentOutcome` / `ConsentDecision` types. Results are delivered on the Unity main thread. In the editor and on unsupported platforms the present calls report `ConsentOutcome.Failed`.
@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The Basic Integration sample asks for consent after `Initialize` and has "Privacy settings" and "Reset consent" buttons.
 
 ### Changed
-- Native pins bumped to `com.ezoic.sdk:ezoic-ads-sdk:1.18.1` / `EzoicAdsSDK ~> 1.18.0` (from 1.11.0). Every native API the bridges call is unchanged.
+- Native pins bumped to `com.ezoic.sdk:ezoic-ads-sdk:1.19.0` / `EzoicAdsSDK ~> 1.19.0` (from 1.11.0). Every native API the bridges call is unchanged. The native SDKs now send COPPA to Google Mobile Ads, IMA and Amazon, keep the device id only while consent allows storage, send a launch pageview for apps that initialize after their first screen, and no longer hold ad requests for 2 s waiting on a pageview id.
 - **Requirements raised by the native SDKs:** iOS 15.0+ (was 14.0) and Xcode 26.2+; Google Mobile Ads 13.x on iOS and 25.x on Android (pulled in transitively; was 12.x / 22.x). Android still needs Minimum API Level 24, and now Target API Level 34+ (the native SDK depends on `androidx.browser:browser:1.8.0`, which needs compileSdk 34). If your project also uses the Google Mobile Ads Unity plugin, use a release built on those Google Mobile Ads versions.
 - **Action required for GDPR-region users:** since native 1.13 the built-in consent dialog is on by default, and ad loads for users in GDPR regions fail until they have decided. Call `EzoicAds.PresentConsentIfRequired` right after `EzoicAds.Initialize` and add a "Privacy settings" button that calls `EzoicAds.PresentConsentSettings`, or set `EzoicConfiguration.CmpEnabled = false` if you run your own CMP. `SetGDPRConsent` now also makes the built-in dialog stand down for the current launch, so call it before `Initialize`.
 
