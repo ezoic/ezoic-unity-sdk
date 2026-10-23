@@ -20,6 +20,9 @@ namespace Ezoic.Ads
             "Ezoic Ads: the current platform is not supported (Android and iOS only). Calls are no-ops.";
 
 #if UNITY_ANDROID && !UNITY_EDITOR
+        // EzoicError.AlreadyInitialized.code
+        private const int AlreadyInitializedErrorCode = 1002;
+
         private static EzoicCallbackProxy _initProxy;
         private static volatile bool _initialized;
 
@@ -37,15 +40,24 @@ namespace Ezoic.Ads
                 return;
             }
 
+            Action onSuccess = () =>
+            {
+                _initialized = true;
+                EzoicMainThreadDispatcher.Enqueue(() => onComplete?.Invoke(true, null));
+                _initProxy = null;
+            };
             _initProxy = new EzoicCallbackProxy(
-                () =>
+                onSuccess,
+                (code, error) =>
                 {
-                    _initialized = true;
-                    EzoicMainThreadDispatcher.Enqueue(() => onComplete?.Invoke(true, null));
-                    _initProxy = null;
-                },
-                error =>
-                {
+                    // A repeat Initialize (e.g. after a scene reload) succeeds; the native SDK
+                    // keeps the configuration from the first call.
+                    if (code == AlreadyInitializedErrorCode)
+                    {
+                        onSuccess();
+                        return;
+                    }
+
                     EzoicMainThreadDispatcher.Enqueue(() => onComplete?.Invoke(false, error));
                     _initProxy = null;
                 });

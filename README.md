@@ -292,7 +292,7 @@ platform that is not yet supported:
 
 | Member | Description |
 | --- | --- |
-| `Initialize(string domain, Action<bool, string> onComplete = null)` | Initialize the SDK for your domain. The callback reports `(success, error)`. |
+| `Initialize(string domain, Action<bool, string> onComplete = null)` | Initialize the SDK for your domain. The callback reports `(success, error)`. Calling it again after a successful initialization (e.g. from a reloaded scene) reports success; the native SDK keeps the configuration from the first call. |
 | `IsInitialized` | `true` once initialization succeeds. |
 | `TrackPageview()` | Signal a new pageview / screen. |
 | `SetGDPRConsent(bool applies, string consentString)` | Set GDPR/TCF consent. |

@@ -390,7 +390,9 @@ public func ezoic_unity_init(_ callId: Int32, _ domain: UnsafePointer<CChar>?) {
             // fires under the threading invariant.
             DispatchQueue.main.async {
                 switch result {
-                case .success:
+                // A repeat Initialize (e.g. after a scene reload) succeeds; the
+                // native SDK keeps the configuration from the first call.
+                case .success, .failure(.alreadyInitialized):
                     initSuccessCb?(callId)
                 case .failure(let error):
                     fire(initFailureCb, callId, error.localizedDescription)

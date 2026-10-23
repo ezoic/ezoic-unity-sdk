@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - iOS: the Swift bridge imported `EzoicAdsSDK`, but the `EzoicAdsSDK` CocoaPod (the EDM4U / Podfile install path) vends the module `EzoicAdsSDKBinary`, so Unity iOS builds failed to compile the bridge. It now imports `EzoicAdsSDKBinary` when available and falls back to `EzoicAdsSDK` (SwiftPM). CI now also compiles the bridge against the real CocoaPod.
+- `EzoicAds.Initialize` called again after the SDK is already initialized (for example from a scene that is loaded twice) now reports success instead of failing with "Ezoic SDK is already initialized." (native error 1002). The native SDK keeps the configuration from the first call.
 
 ## [1.11.0] - 2026-09-23
 

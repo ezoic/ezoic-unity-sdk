@@ -42,6 +42,7 @@ namespace Ezoic.Ads.Android
         {
             internal const string Class = "com.ezoic.ads.sdk.core.EzoicError";
             internal const string getMessage = "getMessage";
+            internal const string getCode = "getCode";
         }
 
         internal static class EzoicBannerView
