@@ -74,10 +74,13 @@ jobs:
           java-version: '17'
 
       - name: Download AAR and extract classes
+        # Audits the exact version Editor/EzoicDependencies.xml pins.
         run: |
           set -euo pipefail
+          version="$(python3 -c "import xml.etree.ElementTree as ET; s = ET.parse('Editor/EzoicDependencies.xml').find('.//androidPackage').get('spec'); g, a, v = s.split(':'); assert (g, a) == ('com.ezoic.sdk', 'ezoic-ads-sdk'), s; print(v)")"
+          echo "Auditing com.ezoic.sdk:ezoic-ads-sdk:$version"
           curl -fL -o ezoic-ads-sdk.aar \
-            https://repo1.maven.org/maven2/com/ezoic/sdk/ezoic-ads-sdk/1.11.0/ezoic-ads-sdk-1.11.0.aar
+            "https://repo1.maven.org/maven2/com/ezoic/sdk/ezoic-ads-sdk/$version/ezoic-ads-sdk-$version.aar"
           unzip -o ezoic-ads-sdk.aar classes.jar -d aar_extract
           mkdir -p aar_classes
           (cd aar_classes && jar xf ../aar_extract/classes.jar)
@@ -91,7 +94,7 @@ jobs:
   # only — no simulator boot, no tests. The cocoapods-bridge job covers the
   # CocoaPod Unity actually installs.
   swift-bridge:
-    runs-on: macos-15
+    runs-on: macos-26
     # Cold checkout resolves and builds the EzoicAdsSDK dist graph (Prebid Mobile,
     # GMA) from source, so give the build generous headroom.
     timeout-minutes: 45
@@ -99,10 +102,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Select Xcode 16
-        # macos-15 ships Xcode 16.x as /Applications/Xcode.app; the resolved
-        # EzoicAdsSDK 1.11.0 package graph (objectVersion-77) requires Xcode 16.
-        run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+      - name: Select Xcode 26.6
+        # EzoicAdsSDK 1.15+ resolves Google Mobile Ads 13.x, which needs Xcode 26.2+.
+        run: sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
       - name: Show Xcode version
         run: xcodebuild -version
 

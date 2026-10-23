@@ -157,9 +157,9 @@ private func currentRootViewController() -> UIViewController? {
             return root
         }
     }
-    // Legacy fallback for hosts without an active UIWindowScene yet.
-    return UIApplication.shared.windows.first(where: { $0.isKeyWindow })?.rootViewController
-        ?? UIApplication.shared.windows.first?.rootViewController
+    // Fallback for hosts without an active UIWindowScene yet (UnityAppController
+    // exposes its window through the app delegate).
+    return UIApplication.shared.delegate?.window??.rootViewController
 }
 
 /// Resolves the point width to pin the banner container to before the first fill.

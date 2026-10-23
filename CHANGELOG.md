@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Native pins bumped to `com.ezoic.sdk:ezoic-ads-sdk:1.18.1` / `EzoicAdsSDK ~> 1.18.0` (from 1.11.0). Every native API the bridges call is unchanged.
+- **Requirements raised by the native SDKs:** iOS 15.0+ (was 14.0) and Xcode 26.2+; Google Mobile Ads 13.x on iOS and 25.x on Android (pulled in transitively; was 12.x / 22.x). Android still needs Minimum API Level 24, and now Target API Level 34+ (the native SDK depends on `androidx.browser:browser:1.8.0`, which needs compileSdk 34). If your project also uses the Google Mobile Ads Unity plugin, use a release built on those Google Mobile Ads versions.
+
 ### Fixed
 - iOS: the Swift bridge imported `EzoicAdsSDK`, but the `EzoicAdsSDK` CocoaPod (the EDM4U / Podfile install path) vends the module `EzoicAdsSDKBinary`, so Unity iOS builds failed to compile the bridge. It now imports `EzoicAdsSDKBinary` when available and falls back to `EzoicAdsSDK` (SwiftPM). CI now also compiles the bridge against the real CocoaPod.
 
