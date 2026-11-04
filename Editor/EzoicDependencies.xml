@@ -12,13 +12,13 @@
 -->
 <dependencies>
   <androidPackages>
-    <androidPackage spec="com.ezoic.sdk:ezoic-ads-sdk:1.19.1">
+    <androidPackage spec="com.ezoic.sdk:ezoic-ads-sdk:1.21.0">
       <repositories>
         <repository>https://repo1.maven.org/maven2</repository>
       </repositories>
     </androidPackage>
   </androidPackages>
-  <remoteSwiftPackage url="https://github.com/ezoic/ezoic-swift-sdk-dist.git" version="1.20.0" upToNextMajor="true">
+  <remoteSwiftPackage url="https://github.com/ezoic/ezoic-swift-sdk-dist.git" version="1.21.0" upToNextMajor="true">
     <swiftPackage name="EzoicAdsSDK" replacesPod="EzoicAdsSDK" />
   </remoteSwiftPackage>
   <iosPods>

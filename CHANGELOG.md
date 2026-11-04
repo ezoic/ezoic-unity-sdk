@@ -5,6 +5,15 @@ All notable changes to the Ezoic Ads Unity SDK are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.21.0] - 2026-11-04
+
+### Changed
+- Native SDK pins bumped to `com.ezoic.sdk:ezoic-ads-sdk:1.21.0` and the `EzoicAdsSDK` Swift package 1.21.0 (up to next major). No API change in this package.
+- Banners now refresh automatically every 30 seconds, or at the interval Ezoic sets for the ad unit. This package never exposed refresh settings, so there is nothing to change in your game.
+- Android: InMobi joins Ezoic's Google Ad Manager auctions through GAM SDK Bidding. The native library now includes Google's InMobi adapter (`com.google.ads.mediation:inmobi:11.5.0.1`); nothing to configure. EDM4U / Gradle also pull in Google Mobile Ads `play-services-ads` 25.5.0 (was 25.2.0), Kotlin stdlib 2.2.21 and kotlinx-coroutines 1.10.1. If a custom `mainTemplate.gradle` or another plugin pins `play-services-ads`, it must allow 25.5.0. This package has no Kotlin sources, so the native SDK's Kotlin 2.2+ requirement (for apps that compile Kotlin against Google Mobile Ads) only applies if your project compiles its own Kotlin against it.
+- iOS: with its debug logging on, native 1.21.0 logs a warning at initialize when `Info.plist` lacks `SKAdNetworkItems`, lacks Google's or InMobi's SKAdNetwork ID, or has uppercase IDs. This package does not turn native debug logging on.
+- iOS CocoaPods installs (`~> 1.19`, unchanged) keep resolving native 1.19.1, the last `EzoicAdsSDK` release on CocoaPods trunk (no later native release goes there; trunk is read-only from December 2, 2026). They don't get the native changes since then: on 1.19.1, banners refresh only when Ezoic's server turns refresh on for the ad unit. The Swift package gets 1.21.0.
+
 ## [1.20.0] - 2026-11-04
 
 ### Added

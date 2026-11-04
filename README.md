@@ -25,16 +25,18 @@ guards in your game code.
 
 | | Android | iOS |
 | --- | --- | --- |
-| Native Ezoic SDK | `com.ezoic.sdk:ezoic-ads-sdk:1.19.1` | `EzoicAdsSDK` Swift package 1.20.0 (up to next major), or pod `~> 1.19` |
-| Google Mobile Ads (pulled in transitively) | 25.x (`play-services-ads:25.2.0`) | 13.x |
+| Native Ezoic SDK | `com.ezoic.sdk:ezoic-ads-sdk:1.21.0` | `EzoicAdsSDK` Swift package 1.21.0 (up to next major), or pod `~> 1.19` |
+| Google Mobile Ads (pulled in transitively) | 25.x (`play-services-ads:25.5.0`) | 13.x |
 | Toolchain | Target API Level 34+ (the SDK depends on `androidx.browser:browser:1.8.0`, which needs compileSdk 34+) | Xcode 26.2+ (required by Google Mobile Ads 13.x) |
 | Minimum OS | Android 7.0 (API 24) | iOS 15.0 |
 
 If your project also uses the Google Mobile Ads Unity plugin or another package that pins
 Google Mobile Ads, use a release built on Google Mobile Ads Android 25.x / iOS 13.x so EDM4U
-can resolve a single version. On iOS, Google Mobile Ads must also come in through a single
-channel: if this package installs as a Swift package while another plugin installs the
-`Google-Mobile-Ads-SDK` CocoaPod, the app links two copies of Google Mobile Ads.
+can resolve a single version. The Android library needs `play-services-ads` 25.5.0, so a custom
+`mainTemplate.gradle` or another plugin that pins an older Google Mobile Ads version must allow
+25.5.0. On iOS, Google Mobile Ads must also come in through a single channel: if this package
+installs as a Swift package while another plugin installs the `Google-Mobile-Ads-SDK`
+CocoaPod, the app links two copies of Google Mobile Ads.
 
 ## Installation
 
@@ -43,7 +45,7 @@ channel: if this package installs as a Swift package while another plugin instal
 In Unity, open **Window → Package Manager → + → Add package from git URL…** and enter:
 
 ```
-https://github.com/ezoic/ezoic-unity-sdk.git#v1.20.0
+https://github.com/ezoic/ezoic-unity-sdk.git#v1.21.0
 ```
 
 Or add it to your project's `Packages/manifest.json` dependencies:
@@ -51,16 +53,16 @@ Or add it to your project's `Packages/manifest.json` dependencies:
 ```json
 {
   "dependencies": {
-    "com.ezoic.ads": "https://github.com/ezoic/ezoic-unity-sdk.git#v1.20.0"
+    "com.ezoic.ads": "https://github.com/ezoic/ezoic-unity-sdk.git#v1.21.0"
   }
 }
 ```
 
-The `#v1.20.0` suffix pins a released version; omit it to track the default branch.
+The `#v1.21.0` suffix pins a released version; omit it to track the default branch.
 
 ### 2. Provide the native Android library
 
-The Android ads run on the native `com.ezoic.sdk:ezoic-ads-sdk:1.19.1` library, which is
+The Android ads run on the native `com.ezoic.sdk:ezoic-ads-sdk:1.21.0` library, which is
 published on Maven Central. You need to make that dependency available to your Android build
 in **one** of two ways.
 
@@ -76,7 +78,7 @@ Maven Central repository to the generated `Assets/Plugins/Android/mainTemplate.g
 
 ```gradle
 dependencies {
-    implementation 'com.ezoic.sdk:ezoic-ads-sdk:1.19.1'
+    implementation 'com.ezoic.sdk:ezoic-ads-sdk:1.21.0'
 }
 ```
 
@@ -126,7 +128,7 @@ fixes the CocoaPods fallback on Unity versions that cannot add Swift packages. M
 **Assets → External Dependency Manager → iOS Resolver → Settings** for EDM4U, where it is on by
 default). This package's `Editor/EzoicDependencies.xml` then makes the iOS Resolver add the
 `https://github.com/ezoic/ezoic-swift-sdk-dist.git` package (up to next major version from
-1.20.0) to the generated Xcode project and link its `EzoicAdsSDK` product to `UnityFramework`.
+1.21.0) to the generated Xcode project and link its `EzoicAdsSDK` product to `UnityFramework`.
 Xcode resolves the package, and Google Mobile Ads, Prebid Mobile and Amazon APS with it, when
 you open or build the project. The iOS Resolver skips the `EzoicAdsSDK` CocoaPod. No further
 action needed.
@@ -135,15 +137,15 @@ action needed.
 If you do not use EDM, build the Xcode project from Unity, open `Unity-iPhone.xcodeproj`, and
 choose **File → Add Package Dependencies…**. Enter
 `https://github.com/ezoic/ezoic-swift-sdk-dist.git`, set **Dependency Rule** to
-**Up to Next Major Version** from `1.20.0`, click **Add Package**, and add the `EzoicAdsSDK`
+**Up to Next Major Version** from `1.21.0`, click **Add Package**, and add the `EzoicAdsSDK`
 product to the `UnityFramework` target. A **Replace** build from Unity regenerates the Xcode
 project and drops the package, so use **Append** or add it again.
 
 **Option C — CocoaPods (no further native updates).**
-CocoaPods trunk becomes permanently read-only on **December 2, 2026**, so the `EzoicAdsSDK` pod
-gets no native SDK updates after its final 1.20.0 release; use Option A or B to keep receiving
-them. EDM falls back to the pod when Swift Package Manager Integration is off, or when your
-EDM4U predates Swift package support (anything before 1.2.187): the iOS Resolver adds `pod 'EzoicAdsSDK', '~> 1.19'` to the generated
+CocoaPods trunk becomes permanently read-only on **December 2, 2026**, and the `EzoicAdsSDK` pod
+there stays at 1.19.1: native SDK 1.20.0 and later ship only as the Swift package. Use Option A
+or B to receive them. EDM falls back to the pod when Swift Package Manager Integration is off,
+or when your EDM4U predates Swift package support (anything before 1.2.187): the iOS Resolver adds `pod 'EzoicAdsSDK', '~> 1.19'` to the generated
 `Podfile` and runs `pod install`. Without EDM, add the pod to the generated `Podfile` in the
 Xcode output directory and run `pod install`:
 
@@ -153,10 +155,12 @@ target 'UnityFramework' do
 end
 ```
 
-`~> 1.19` resolves the newest 1.x release on trunk: 1.19.1 (same API) until the final 1.20.0
-push lands. The pod's Swift module is `EzoicAdsSDKBinary`, while the Swift package's is
-`EzoicAdsSDK`. The bridge handles either; the module name matters only if you call the native
-SDK from your own Swift code.
+`~> 1.19` resolves the newest 1.x release on trunk, 1.19.1. This package's API works the same on
+it, but CocoaPods builds miss the native changes since then (see the [CHANGELOG](CHANGELOG.md));
+for example, banners refresh only when Ezoic's server turns refresh on for the ad unit. The
+pod's Swift module is `EzoicAdsSDKBinary`, while the Swift package's is `EzoicAdsSDK`. The
+bridge handles either; the module name matters only if you call the native SDK from your own
+Swift code.
 
 Set the iOS Deployment Target to **15.0 or higher** under
 **Project Settings → Player → iOS → Other Settings → Target minimum iOS Version**.
@@ -283,6 +287,10 @@ banner.Load();
 
 `BannerPosition` supports `Top`, `Bottom`, `TopLeft`, `TopRight`, `BottomLeft`,
 `BottomRight`, and `Center`.
+
+With native SDK 1.21.0 (Android, and iOS through the Swift package), banners refresh
+automatically every 30 seconds, or at the interval Ezoic sets for the ad unit; there is nothing
+to configure.
 
 Always call `banner.Destroy()` when you are done with a banner; skipping it leaks the native
 ad object, since the managed and native peers hold a cross-heap reference cycle that neither
