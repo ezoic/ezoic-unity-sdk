@@ -161,6 +161,16 @@ SDK from your own Swift code.
 Set the iOS Deployment Target to **15.0 or higher** under
 **Project Settings → Player → iOS → Other Settings → Target minimum iOS Version**.
 
+The generated Xcode project's `Info.plist` also needs your Google Ad Manager application
+ID, `NSUserTrackingUsageDescription` and the SKAdNetwork IDs; see
+[Required App Setup](https://docs.ezoic.com/docs/mobileapps/ios/#required-app-setup-for-ads-to-serve).
+`SKAdNetworkItems` needs every ID in Ezoic's combined list,
+[docs.ezoic.com/skadnetworkids.xml](https://docs.ezoic.com/skadnetworkids.xml), not just
+Google's: Apple reads these only from the app's `Info.plist`, and buyers whose ID is missing
+(Amazon, InMobi, Magnite, PubMatic and other non-Google buyers) can't use SKAdNetwork
+attribution. Unity writes a new `Info.plist` when it replaces the Xcode project, so re-apply
+these after each such build (for example from a `[PostProcessBuild]` editor script).
+
 ## Quick start
 
 All API members are safe to call from the Unity main thread. Make your **first** call
