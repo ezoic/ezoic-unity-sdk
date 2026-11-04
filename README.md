@@ -119,7 +119,9 @@ native library available to the generated Xcode project in **one** of three ways
 Install Unity's [External Dependency Manager](https://docs.unity3d.com/Packages/com.unity.external-dependency-manager@2.1/manual/index.html)
 2.1 or later (`com.unity.external-dependency-manager`, Unity 2022.3+), or Google's
 [EDM4U](https://github.com/googlesamples/unity-jar-resolver) 1.2.189 or later (Unity 2021.3+).
-Make sure **Swift Package Manager Integration** is on in the iOS Resolver settings
+EDM4U added Swift package support in 1.2.187; 1.2.189 is the recommended minimum because it
+fixes the CocoaPods fallback on Unity versions that cannot add Swift packages. Make sure
+**Swift Package Manager Integration** is on in the iOS Resolver settings
 (**Edit → Project Settings → External Dependency Manager → iOS Resolver** for Unity's EDM,
 **Assets → External Dependency Manager → iOS Resolver → Settings** for EDM4U, where it is on by
 default). This package's `Editor/EzoicDependencies.xml` then makes the iOS Resolver add the
@@ -140,8 +142,8 @@ project and drops the package, so use **Append** or add it again.
 **Option C — CocoaPods (no further native updates).**
 CocoaPods trunk becomes permanently read-only on **December 2, 2026**, so the `EzoicAdsSDK` pod
 gets no native SDK updates after its final 1.20.0 release; use Option A or B to keep receiving
-them. EDM falls back to the pod when Swift Package Manager Integration is off or your EDM4U is
-older than 1.2.187: the iOS Resolver adds `pod 'EzoicAdsSDK', '~> 1.19'` to the generated
+them. EDM falls back to the pod when Swift Package Manager Integration is off, or when your
+EDM4U predates Swift package support (anything before 1.2.187): the iOS Resolver adds `pod 'EzoicAdsSDK', '~> 1.19'` to the generated
 `Podfile` and runs `pod install`. Without EDM, add the pod to the generated `Podfile` in the
 Xcode output directory and run `pod install`:
 

@@ -188,10 +188,6 @@ jobs:
 
       - name: Install the pod
         working-directory: tools/cocoapods-check~
-        env:
-          # The 1.19.2 dist tag carries the 1.19.1 podspec; 0b46154 has the 1.19.2 one.
-          # Remove once Editor/EzoicDependencies.xml pins 1.20.0 or later.
-          EZOIC_PODSPEC_REF: 0b46154
         run: pod install --repo-update
 
       - name: Build the Swift bridge for the iOS simulator
