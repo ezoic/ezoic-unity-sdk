@@ -1,13 +1,17 @@
 # CI-only harness used by the `cocoapods-bridge` job: compiles
-# Runtime/Plugins/iOS/*.swift against the published EzoicAdsSDK CocoaPod, the
-# artifact EDM4U installs into a Unity Xcode project (Swift module
-# EzoicAdsSDKBinary). The `~` folder suffix keeps Unity from importing anything
-# here, including the generated Pods/ tree.
+# Runtime/Plugins/iOS/*.swift against the CocoaPods build of EzoicAdsSDK, the
+# artifact EDM installs into a Unity Xcode project when it falls back to
+# CocoaPods (Swift module EzoicAdsSDKBinary). The `~` folder suffix keeps Unity
+# from importing anything here, including the generated Pods/ tree.
 #
 # `pod install` generates BridgeCheck.xcodeproj itself (one framework target that
 # references the bridge sources in place), so nothing generated is committed.
-# The pod requirement and deployment target are read from
-# Editor/EzoicDependencies.xml so this builds exactly what EDM4U would resolve.
+# The native version and deployment target are read from
+# Editor/EzoicDependencies.xml: the pod is the exact version the
+# remoteSwiftPackage element pins, installed from the podspec on that
+# ezoic-swift-sdk-dist tag so it does not depend on CocoaPods trunk (read-only
+# from December 2, 2026). Set EZOIC_PODSPEC_REF to read the podspec from another
+# dist ref.
 #
 #   cd "tools/cocoapods-check~" && pod install
 #   xcodebuild build -workspace BridgeCheck.xcworkspace -scheme EzoicUnityBridgeCheck \
@@ -19,10 +23,20 @@ require 'xcodeproj'
 repo_root = File.expand_path('../..', __dir__)
 
 deps = REXML::Document.new(File.read(File.join(repo_root, 'Editor', 'EzoicDependencies.xml')))
+swift_package = REXML::XPath.first(deps, "//remoteSwiftPackage[swiftPackage/@name='EzoicAdsSDK']")
+raise 'EzoicAdsSDK remoteSwiftPackage not found in Editor/EzoicDependencies.xml' unless swift_package
+native_version = swift_package.attributes['version']
 ios_pod = REXML::XPath.first(deps, "//iosPod[@name='EzoicAdsSDK']")
 raise 'EzoicAdsSDK iosPod not found in Editor/EzoicDependencies.xml' unless ios_pod
 pod_requirement = ios_pod.attributes['version']
 deployment_target = ios_pod.attributes['minTargetSdk']
+
+unless Pod::Requirement.create(pod_requirement).satisfied_by?(Pod::Version.new(native_version))
+  raise "iosPod requirement '#{pod_requirement}' does not admit remoteSwiftPackage version #{native_version}"
+end
+
+podspec_ref = ENV.fetch('EZOIC_PODSPEC_REF', native_version)
+podspec_url = "https://raw.githubusercontent.com/ezoic/ezoic-swift-sdk-dist/#{podspec_ref}/EzoicAdsSDK.podspec"
 
 bridge_sources = Dir[File.join(repo_root, 'Runtime', 'Plugins', 'iOS', '*.swift')].sort
 raise 'No Swift bridge sources found under Runtime/Plugins/iOS' if bridge_sources.empty?
@@ -48,9 +62,19 @@ scheme.save_as(project_path, target_name, true)
 
 platform :ios, deployment_target
 project project_path
-# Mirrors EDM4U's default "Link frameworks statically" Podfile.
+# Mirrors EDM's default "Link frameworks statically" Podfile.
 use_frameworks! :linkage => :static
 
 target target_name do
-  pod 'EzoicAdsSDK', pod_requirement
+  pod 'EzoicAdsSDK', :podspec => podspec_url
+end
+
+# Dist tags before 1.20.0 carry the previous release's podspec, so a tag's
+# podspec is not guaranteed to describe the tag's version.
+pre_install do |installer|
+  spec = installer.analysis_result.specifications.find { |s| s.name == 'EzoicAdsSDK' }
+  unless spec && spec.version.to_s == native_version
+    raise "#{podspec_url} declares EzoicAdsSDK #{spec&.version || 'nothing'}, expected #{native_version}"
+  end
+  Pod::UI.puts "EzoicAdsSDK #{spec.version} from #{podspec_url}"
 end

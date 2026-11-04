@@ -5,6 +5,18 @@ All notable changes to the Ezoic Ads Unity SDK are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.20.0] - 2026-11-04
+
+### Added
+- iOS: Swift Package Manager install. `Editor/EzoicDependencies.xml` declares the native SDK as the Swift package `https://github.com/ezoic/ezoic-swift-sdk-dist.git` (product `EzoicAdsSDK`, up to next major version from 1.20.0). With Unity's External Dependency Manager 2.1+ or EDM4U 1.2.189+ and **Swift Package Manager Integration** on in the iOS Resolver settings, EDM adds the package to the generated Xcode project and skips the `EzoicAdsSDK` CocoaPod. Without EDM, add the package in Xcode (see the README).
+
+### Changed
+- iOS native SDK 1.20.0. Only its dependencies change: Prebid Mobile 3.4.1 and Amazon APS 5.6.6 now come from their official Swift packages, and Google Mobile Ads stays on 13.x. No API change. Android stays on `com.ezoic.sdk:ezoic-ads-sdk:1.19.1`.
+- The CocoaPod requirement is now `~> 1.19` (was `~> 1.19.1`), so EDM without Swift Package Manager, and manual Podfiles, resolve 1.19.1 today and 1.20.0 once it is published to CocoaPods trunk.
+
+### Deprecated
+- The CocoaPods install path. CocoaPods trunk becomes permanently read-only on December 2, 2026, so the `EzoicAdsSDK` pod gets no native SDK updates after 1.20.0. Move to Swift Package Manager to keep receiving them.
+
 ## [1.19.1] - 2026-10-23
 
 ### Fixed

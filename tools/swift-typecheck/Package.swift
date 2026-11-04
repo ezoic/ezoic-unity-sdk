@@ -17,10 +17,11 @@ let package = Package(
     ],
     dependencies: [
         .package(
-            // Matches Editor/EzoicDependencies.xml's `~> 1.19.1` (CocoaPods optimistic
-            // operator) so CI type-checks the same 1.18.x range the pod can resolve to.
-            url: "https://github.com/ezoic/ezoic-swift-sdk-dist",
-            .upToNextMinor(from: "1.19.1")
+            // Matches Editor/EzoicDependencies.xml's remoteSwiftPackage (same URL,
+            // version and upToNextMajor rule, enforced by the CI `validate` job) so CI
+            // type-checks the same range EDM adds to a Unity Xcode project.
+            url: "https://github.com/ezoic/ezoic-swift-sdk-dist.git",
+            .upToNextMajor(from: "1.20.0")
         )
     ],
     targets: [

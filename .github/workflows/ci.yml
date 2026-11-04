@@ -91,8 +91,9 @@ jobs:
   # Type-check Runtime/Plugins/iOS/*.swift against the SwiftPM distribution of
   # EzoicAdsSDK (ezoic-swift-sdk-dist) so a rename or signature drift in the
   # native SDK breaks CI here rather than in a publisher's Xcode build. Compiles
-  # only — no simulator boot, no tests. The cocoapods-bridge job covers the
-  # CocoaPod Unity actually installs.
+  # only — no simulator boot, no tests. This is the package EDM adds with Swift
+  # Package Manager Integration on; the cocoapods-bridge job covers the CocoaPods
+  # fallback.
   swift-bridge:
     runs-on: macos-26
     # Cold checkout resolves and builds the EzoicAdsSDK dist graph (Prebid Mobile,
@@ -167,9 +168,12 @@ jobs:
             -skipPackagePluginValidation \
             COMPILER_INDEX_STORE_ENABLE=NO
 
-  # Compile Runtime/Plugins/iOS/*.swift against the published EzoicAdsSDK CocoaPod —
-  # the artifact EDM4U installs into a Unity Xcode project, whose Swift module is
-  # `EzoicAdsSDKBinary` — at the version Editor/EzoicDependencies.xml pins.
+  # Compile Runtime/Plugins/iOS/*.swift against the CocoaPods build of EzoicAdsSDK —
+  # the artifact EDM installs into a Unity Xcode project when it falls back to
+  # CocoaPods, whose Swift module is `EzoicAdsSDKBinary` — at the exact version the
+  # remoteSwiftPackage in Editor/EzoicDependencies.xml pins. The podspec comes from
+  # that ezoic-swift-sdk-dist tag rather than CocoaPods trunk (read-only from
+  # December 2, 2026).
   cocoapods-bridge:
     runs-on: macos-26
     timeout-minutes: 30
@@ -224,3 +228,36 @@ jobs:
 
       - name: Validate EzoicDependencies.xml
         run: python3 -c "import xml.etree.ElementTree as ET; ET.parse('Editor/EzoicDependencies.xml')"
+
+      - name: Check the iOS Swift package, CocoaPod and type-check pins agree
+        shell: python
+        run: |
+          import re
+          import xml.etree.ElementTree as ET
+
+          deps = ET.parse('Editor/EzoicDependencies.xml').getroot()
+          spm = deps.findall('.//remoteSwiftPackage')
+          assert len(spm) == 1, f'expected one remoteSwiftPackage, found {len(spm)}'
+          spm = spm[0]
+          url, version = spm.get('url'), spm.get('version')
+          assert url == 'https://github.com/ezoic/ezoic-swift-sdk-dist.git', url
+          assert spm.get('upToNextMajor') == 'true', 'remoteSwiftPackage must set upToNextMajor="true"'
+          products = [(p.get('name'), p.get('replacesPod')) for p in spm.findall('swiftPackage')]
+          assert products == [('EzoicAdsSDK', 'EzoicAdsSDK')], products
+
+          pod = deps.find(".//iosPod[@name='EzoicAdsSDK']")
+          assert pod is not None, 'EzoicAdsSDK iosPod missing'
+          m = re.fullmatch(r'~> (\d+(?:\.\d+)*)', pod.get('version'))
+          assert m, f"iosPod version must be a '~>' requirement: {pod.get('version')}"
+          floor = [int(x) for x in m.group(1).split('.')]
+          ceiling = floor[:-1] if len(floor) > 1 else floor
+          ceiling = ceiling[:-1] + [ceiling[-1] + 1]
+          v = [int(x) for x in version.split('.')]
+          pad = lambda xs: xs + [0] * (3 - len(xs))
+          assert pad(floor) <= pad(v) < pad(ceiling), f"iosPod '{pod.get('version')}' does not admit {version}"
+
+          manifest = open('tools/swift-typecheck/Package.swift').read()
+          m = re.search(r'url: "([^"]+)",\s*\.upToNextMajor\(from: "([^"]+)"\)', manifest)
+          assert m, 'tools/swift-typecheck/Package.swift must use .upToNextMajor(from:)'
+          assert m.groups() == (url, version), f'Package.swift pins {m.groups()}, XML pins {(url, version)}'
+          print(f'EzoicAdsSDK {version}: Swift package up to next major, iosPod {pod.get("version")}')
