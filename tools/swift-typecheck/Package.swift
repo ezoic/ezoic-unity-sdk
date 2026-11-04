@@ -21,7 +21,7 @@ let package = Package(
             // version and upToNextMajor rule, enforced by the CI `validate` job) so CI
             // type-checks the same range EDM adds to a Unity Xcode project.
             url: "https://github.com/ezoic/ezoic-swift-sdk-dist.git",
-            .upToNextMajor(from: "1.20.0")
+            .upToNextMajor(from: "1.21.0")
         )
     ],
     targets: [
