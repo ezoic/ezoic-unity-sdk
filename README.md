@@ -142,10 +142,10 @@ product to the `UnityFramework` target. A **Replace** build from Unity regenerat
 project and drops the package, so use **Append** or add it again.
 
 **Option C — CocoaPods (no further native updates).**
-CocoaPods trunk becomes permanently read-only on **December 2, 2026**, and the `EzoicAdsSDK` pod
-there stays at 1.19.1: native SDK 1.20.0 and later ship only as the Swift package. Use Option A
-or B to receive them. EDM falls back to the pod when Swift Package Manager Integration is off,
-or when your EDM4U predates Swift package support (anything before 1.2.187): the iOS Resolver adds `pod 'EzoicAdsSDK', '~> 1.19'` to the generated
+CocoaPods trunk becomes permanently read-only on **December 2, 2026**, so the `EzoicAdsSDK` pod
+gets no native SDK updates after its final 1.20.0 release; use Option A or B to keep receiving
+them. EDM falls back to the pod when Swift Package Manager Integration is off, or when your
+EDM4U predates Swift package support (anything before 1.2.187): the iOS Resolver adds `pod 'EzoicAdsSDK', '~> 1.19'` to the generated
 `Podfile` and runs `pod install`. Without EDM, add the pod to the generated `Podfile` in the
 Xcode output directory and run `pod install`:
 
@@ -155,8 +155,8 @@ target 'UnityFramework' do
 end
 ```
 
-`~> 1.19` resolves the newest 1.x release on trunk, 1.19.1. This package's API works the same on
-it, but CocoaPods builds miss the native changes since then (see the [CHANGELOG](CHANGELOG.md));
+`~> 1.19` resolves the newest 1.x release on trunk: 1.19.1 (same API) until the final 1.20.0
+push lands. CocoaPods builds miss the native changes after that (see the [CHANGELOG](CHANGELOG.md));
 for example, banners refresh only when Ezoic's server turns refresh on for the ad unit. The
 pod's Swift module is `EzoicAdsSDKBinary`, while the Swift package's is `EzoicAdsSDK`. The
 bridge handles either; the module name matters only if you call the native SDK from your own
