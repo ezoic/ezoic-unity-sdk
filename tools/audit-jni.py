@@ -1,11 +1,17 @@
 #!/usr/bin/env python3
-"""Audit the JNI names the Unity Android bridge uses against the published Ezoic AAR.
+"""Audit the JNI names the Unity Android bridges use against the published Ezoic AARs.
 
-The C# bridge never hard-codes a Java class or member name inline; every name lives as a
-``const string`` in ``Runtime/Android/JniNames.cs``. This script parses that single file and,
-for every Ezoic SDK class it declares, uses ``javap`` against the AAR's extracted ``classes``
-to confirm the class exists and that every member name the bridge relies on is present. If the
-bridge and the shipped SDK ever drift, this fails loudly.
+The C# bridges never hard-code a Java class or member name inline; every name lives as a
+``const string`` in one names file per package:
+
+  * ``Runtime/Android/JniNames.cs``                            (com.ezoic.ads)
+  * ``com.ezoic.cmp-sdk~/Runtime/Android/CmpJniNames.cs``      (com.ezoic.cmp-sdk)
+
+This script parses both and, for every Ezoic SDK class they declare, uses ``javap`` against the
+extracted AAR classes to confirm the class exists and that every member name the bridge relies
+on is present. From native 1.22.0 the ``com.ezoic.ads.sdk.privacy.cmp`` classes live in the
+``ezoic-cmp-sdk`` AAR, so the classpath must hold both AARs' classes. If a bridge and the
+shipped SDK ever drift, this fails loudly.
 
 Structure of JniNames.cs (the mapping is encoded by the file itself, no cleverness needed):
 
@@ -31,8 +37,12 @@ Audit rule (matches the doc comment in JniNames.cs):
     javap dump of that class.
 
 Environment:
-  AAR_CLASSES  (required)  directory containing the extracted AAR classes (the classpath root).
+  AAR_CLASSES  (required)  directory with the extracted classes of both AARs (the classpath
+                           root), or several such directories joined with os.pathsep.
   JAVAP        (optional)  path to the javap binary; defaults to "javap" on PATH.
+  JNI_NAMES    (optional)  names files to audit (repo-relative, joined with os.pathsep);
+                           defaults to both. CI also audits the CMP file alone against the
+                           ezoic-cmp-sdk AAR alone, proving com.ezoic.cmp-sdk needs no ads classes.
 
 Exit code 0 and a PASS summary when every class and member is found; exit code 1 with a clear
 list of misses otherwise. Standard library only.
@@ -138,34 +148,46 @@ def member_present(member, javap_output):
     return re.search(r"\b" + re.escape(member) + r"\b", javap_output) is not None
 
 
+# One JNI names file per package, relative to the repository root.
+JNI_NAMES_FILES = [
+    os.path.join("Runtime", "Android", "JniNames.cs"),
+    os.path.join("com.ezoic.cmp-sdk~", "Runtime", "Android", "CmpJniNames.cs"),
+]
+
+
 def main():
     aar_classes = os.environ.get("AAR_CLASSES")
     if not aar_classes:
         sys.stderr.write("ERROR: AAR_CLASSES is not set (path to extracted AAR classes).\n")
         return 1
-    if not os.path.isdir(aar_classes):
-        sys.stderr.write("ERROR: AAR_CLASSES is not a directory: %s\n" % aar_classes)
-        return 1
+    for entry in aar_classes.split(os.pathsep):
+        if not os.path.isdir(entry):
+            sys.stderr.write("ERROR: AAR_CLASSES entry is not a directory: %s\n" % entry)
+            return 1
 
     javap = os.environ.get("JAVAP", "javap")
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    jni_names_path = os.path.normpath(
-        os.path.join(script_dir, "..", "Runtime", "Android", "JniNames.cs")
-    )
-    if not os.path.isfile(jni_names_path):
-        sys.stderr.write("ERROR: cannot find JniNames.cs at %s\n" % jni_names_path)
-        return 1
+    repo_root = os.path.normpath(os.path.join(script_dir, ".."))
 
-    with open(jni_names_path, "r", encoding="utf-8") as f:
-        source = f.read()
+    # (fqcn, members) pairs; a class named in both files is audited once per file, which is
+    # cheap and keeps each miss attributable to its package.
+    audited = []
+    selected = os.environ.get("JNI_NAMES")
+    names_files = selected.split(os.pathsep) if selected else JNI_NAMES_FILES
+    for relative in names_files:
+        path = os.path.join(repo_root, relative)
+        if not os.path.isfile(path):
+            sys.stderr.write("ERROR: cannot find %s\n" % path)
+            return 1
+        with open(path, "r", encoding="utf-8") as f:
+            parsed = parse_audited_classes(f.read())
+        if not parsed:
+            sys.stderr.write("ERROR: no audited (com.ezoic) classes parsed from %s.\n" % relative)
+            return 1
+        print("Auditing JNI names from %s" % relative)
+        audited.extend(parsed)
 
-    audited = parse_audited_classes(source)
-    if not audited:
-        sys.stderr.write("ERROR: no audited (com.ezoic) classes parsed from JniNames.cs.\n")
-        return 1
-
-    print("Auditing JNI names from %s" % jni_names_path)
     print("  javap:       %s" % javap)
     print("  AAR classes: %s" % aar_classes)
     print("")
@@ -174,7 +196,7 @@ def main():
     class_count = 0
     member_count = 0
 
-    for fqcn, members in sorted(audited):
+    for fqcn, members in sorted(set((fqcn, tuple(members)) for fqcn, members in audited)):
         class_count += 1
         ok, output = run_javap(javap, aar_classes, fqcn)
         if not ok:
@@ -202,7 +224,7 @@ def main():
         return 1
 
     print(
-        "JNI AUDIT PASS: %d classes, %d member names verified against the AAR."
+        "JNI AUDIT PASS: %d classes, %d member names verified against the AARs."
         % (class_count, member_count)
     )
     return 0

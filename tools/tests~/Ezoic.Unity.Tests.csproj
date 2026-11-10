@@ -28,6 +28,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- com.ezoic.cmp-sdk -->
+    <Compile Include="../../com.ezoic.cmp-sdk~/Runtime/ConsentResult.cs" Link="Cmp/ConsentResult.cs" />
+    <Compile Include="../../com.ezoic.cmp-sdk~/Runtime/Android/CmpJniNames.cs" Link="Cmp/CmpJniNames.cs" />
+    <Compile Include="../../com.ezoic.cmp-sdk~/Runtime/Android/ConsentOutcomeMapping.cs" Link="Cmp/ConsentOutcomeMapping.cs" />
+    <Compile Include="../../com.ezoic.cmp-sdk~/Runtime/iOS/IosAbi.cs" Link="Cmp/IosAbi.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
     <PackageReference Include="NUnit" Version="4.2.2" />
     <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
