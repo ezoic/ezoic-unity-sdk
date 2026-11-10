@@ -25,9 +25,10 @@ Unity copies the sample into `Assets/Samples/Ezoic Ads/<version>/Basic Integrati
    - **Banner / Interstitial / Rewarded Ad Unit Id** — your Ezoic ad unit ids.
 4. Build to a device and use the on-screen buttons: **Initialize** first (it also
    shows the consent dialog to users in GDPR regions), then load/show any ad type.
-   **Privacy settings** reopens the consent dialog; **Reset consent** clears the
-   stored decision, so ads wait for a new decision and the dialog shows again on
-   the next launch.
+   **Privacy settings** reopens the consent dialog in GDPR regions and opens the
+   US privacy settings in covered US states; **Reset consent** clears the stored
+   decision, so ads wait for a new decision and the dialog shows again on the
+   next launch.
 
 ## Platform notes
 
@@ -37,6 +38,6 @@ report failure, so the demo still runs but shows no ads.
 
 Building to a device requires the native SDK setup described in the package
 [README](https://github.com/ezoic/ezoic-unity-sdk#readme): the External Dependency Manager for Unity (EDM4U) to
-resolve the native Android library / iOS CocoaPod, the Google Ad Manager
-application id in your Android manifest / iOS `Info.plist`, and `pod install` on
-iOS after EDM4U generates the Podfile.
+resolve the native Android library and the iOS Swift package (Swift Package
+Manager Integration on), and the Google Ad Manager application id in your
+Android manifest / iOS `Info.plist`.
