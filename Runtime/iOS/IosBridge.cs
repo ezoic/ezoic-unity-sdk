@@ -151,12 +151,12 @@ namespace Ezoic.Ads.iOS
         // ---- High-level entry points used by the managed ad classes. Each ensures callbacks are
         // registered, then forwards to the native export. bool crosses the ABI as Int32. ----
 
-        internal static void Initialize(string domain, bool cmpEnabled, Action onSuccess, Action<string> onFailure)
+        internal static void Initialize(string domain, bool cmpEnabled, bool? appPaid, Action onSuccess, Action<string> onFailure)
         {
             EnsureCallbacksRegistered();
             var callId = NextId();
             _pendingInit[callId] = (onSuccess, onFailure);
-            ezoic_unity_init(callId, domain, cmpEnabled ? 1 : 0);
+            ezoic_unity_init(callId, domain, cmpEnabled ? 1 : 0, IosAbi.EncodeOptionalBool(appPaid));
         }
 
         internal static void PresentConsent(bool settings, Action<ConsentResult> onComplete)
@@ -183,8 +183,19 @@ namespace Ezoic.Ads.iOS
         /// <summary>Native tri-state: -1 unknown (null), 0 false, 1 true.</summary>
         internal static bool? IsConsentRequired()
         {
-            var value = ezoic_unity_is_consent_required();
-            return value < 0 ? (bool?)null : value != 0;
+            return IosAbi.DecodeOptionalBool(ezoic_unity_is_consent_required());
+        }
+
+        /// <summary>Native tri-state: -1 unknown (null), 0 false, 1 true.</summary>
+        internal static bool? IsPrivacyOptionsRequired()
+        {
+            return IosAbi.DecodeOptionalBool(ezoic_unity_is_privacy_options_required());
+        }
+
+        internal static void SetAppContent(string language, string genre)
+        {
+            EnsureCallbacksRegistered();
+            ezoic_unity_set_app_content(language, genre);
         }
 
         internal static void TrackPageview()
@@ -305,7 +316,7 @@ namespace Ezoic.Ads.iOS
             {
                 if (_pendingConsent.TryRemove(id, out var cb))
                 {
-                    cb?.Invoke(new ConsentResult((ConsentOutcome)outcome, (ConsentDecision)decision, msg));
+                    cb?.Invoke(IosAbi.ConsentResultFrom(outcome, decision, msg));
                 }
             });
         }
@@ -516,7 +527,7 @@ namespace Ezoic.Ads.iOS
         private static extern void ezoic_unity_consent_set_callbacks(IdConsentCallback onResult);
 
         [DllImport("__Internal", EntryPoint = "ezoic_unity_init")]
-        private static extern void ezoic_unity_init(int callId, [MarshalAs(UnmanagedType.LPUTF8Str)] string domain, int cmpEnabled);
+        private static extern void ezoic_unity_init(int callId, [MarshalAs(UnmanagedType.LPUTF8Str)] string domain, int cmpEnabled, int appPaid);
 
         [DllImport("__Internal", EntryPoint = "ezoic_unity_present_consent_if_required")]
         private static extern void ezoic_unity_present_consent_if_required(int callId);
@@ -529,6 +540,12 @@ namespace Ezoic.Ads.iOS
 
         [DllImport("__Internal", EntryPoint = "ezoic_unity_is_consent_required")]
         private static extern int ezoic_unity_is_consent_required();
+
+        [DllImport("__Internal", EntryPoint = "ezoic_unity_is_privacy_options_required")]
+        private static extern int ezoic_unity_is_privacy_options_required();
+
+        [DllImport("__Internal", EntryPoint = "ezoic_unity_set_app_content")]
+        private static extern void ezoic_unity_set_app_content([MarshalAs(UnmanagedType.LPUTF8Str)] string language, [MarshalAs(UnmanagedType.LPUTF8Str)] string genre);
 
         [DllImport("__Internal", EntryPoint = "ezoic_unity_track_pageview")]
         private static extern void ezoic_unity_track_pageview();

@@ -123,9 +123,12 @@ namespace Ezoic.Ads.Samples
         {
             GUILayout.Space(6f);
             bool? required = EzoicAds.IsConsentRequired;
-            GUILayout.Label("Consent required: " + (required.HasValue ? required.Value.ToString() : "unknown"));
+            bool? options = EzoicAds.IsPrivacyOptionsRequired;
+            GUILayout.Label("Consent required: " + Describe(required) + "   |   Privacy options required: " + Describe(options));
             GUILayout.BeginHorizontal();
-            // TCF requires an always-reachable way to reopen the consent dialog.
+            // In a real app, show this entry point while IsPrivacyOptionsRequired is true (GDPR
+            // regions and covered US states); TCF requires it to be always reachable there. The
+            // demo keeps it enabled everywhere so you can try it on any device.
             if (GUILayout.Button("Privacy settings"))
             {
                 Log("PresentConsentSettings()…");
@@ -559,6 +562,11 @@ namespace Ezoic.Ads.Samples
         private static string Describe(string value)
         {
             return string.IsNullOrEmpty(value) ? "(none)" : value;
+        }
+
+        private static string Describe(bool? value)
+        {
+            return value.HasValue ? value.Value.ToString() : "unknown";
         }
     }
 }

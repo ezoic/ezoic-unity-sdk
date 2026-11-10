@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Unit tests for the platform-independent parts of both packages (consent outcome mapping
+    and the iOS C-ABI value encodings). They compile the pure source files directly, so no
+    Unity assemblies are needed. The `~` folder suffix keeps Unity from importing these
+    sources into the com.ezoic.ads package.
+
+    Usage:
+      dotnet test "tools/tests~/Ezoic.Unity.Tests.csproj"
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>9</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- com.ezoic.ads -->
+    <Compile Include="../../Runtime/ConsentResult.cs" Link="Ads/ConsentResult.cs" />
+    <Compile Include="../../Runtime/Android/JniNames.cs" Link="Ads/JniNames.cs" />
+    <Compile Include="../../Runtime/Android/ConsentOutcomeMapping.cs" Link="Ads/ConsentOutcomeMapping.cs" />
+    <Compile Include="../../Runtime/iOS/IosAbi.cs" Link="Ads/IosAbi.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="NUnit" Version="4.2.2" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+  </ItemGroup>
+
+</Project>
