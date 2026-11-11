@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  External Dependency Manager (EDM / EDM4U) dependency manifest for the Ezoic CMP.
+  The Android Resolver adds the Maven package to Gradle, and the iOS Resolver adds
+  the Swift package to the generated Xcode project (Swift Package Manager
+  Integration on: EDM4U 1.2.189+, Unity's EDM 2.1+). There is no CocoaPod.
+  With com.ezoic.ads also installed, Gradle resolves a single ezoic-cmp-sdk (the
+  ads library depends on it), and EDM merges both manifests' entries for the same
+  Swift package URL into one package reference, so each native library is linked
+  once. Without EDM, add the equivalent dependencies manually (see README).
+-->
+<dependencies>
+  <androidPackages>
+    <androidPackage spec="com.ezoic.sdk:ezoic-cmp-sdk:1.22.0">
+      <repositories>
+        <repository>https://repo1.maven.org/maven2</repository>
+      </repositories>
+    </androidPackage>
+  </androidPackages>
+  <remoteSwiftPackage url="https://github.com/ezoic/ezoic-swift-sdk-dist.git" version="1.22.0" upToNextMajor="true">
+    <swiftPackage name="EzoicCmpSDK" />
+  </remoteSwiftPackage>
+</dependencies>
