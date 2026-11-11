@@ -28,11 +28,17 @@ namespace Ezoic.Cmp
 
         private const string EmptyDomainMessage = "Ezoic CMP: domain must not be empty.";
 
+#if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
+        private static readonly AutoPresentGate AutoPresent = new AutoPresentGate();
+#endif
+
         /// <summary>
         /// Starts the CMP for your Ezoic domain (e.g. "example.com") with the default
         /// <see cref="EzoicCmpConfiguration"/>. Returns at once: the settings load in the
-        /// background, and <see cref="PresentConsentIfRequired"/> waits for them. Call it once per
-        /// launch; repeat calls are ignored by the native CMP.
+        /// background, and <see cref="PresentConsentIfRequired"/> waits for them. With the default
+        /// <see cref="EzoicCmpConfiguration.AutoPresentConsent"/> it then shows the consent dialog
+        /// once if this user must decide. Call it once per launch; repeat calls are ignored by the
+        /// native CMP and do not present again.
         /// </summary>
         /// <param name="domain">Your Ezoic-registered domain.</param>
         public static void Initialize(string domain)
@@ -42,9 +48,10 @@ namespace Ezoic.Cmp
 
         /// <summary>
         /// Shows the consent dialog if this user must decide (GDPR applies and no valid decision
-        /// is stored). Call it once per launch right after <see cref="Initialize(string)"/>, and
-        /// again after a <see cref="ConsentOutcome.Dismissed"/> or <see cref="ConsentOutcome.Failed"/>
-        /// result. In covered US states it reports <see cref="ConsentOutcome.NotRequired"/>: the
+        /// is stored). <see cref="Initialize(string)"/> already calls it once unless
+        /// <see cref="EzoicCmpConfiguration.AutoPresentConsent"/> is false; call it yourself to
+        /// read the result, and again after a <see cref="ConsentOutcome.Dismissed"/> or
+        /// <see cref="ConsentOutcome.Failed"/> result. In covered US states it reports <see cref="ConsentOutcome.NotRequired"/>: the
         /// CMP shows its US privacy notice by itself.
         /// </summary>
         /// <param name="onComplete">Optional result callback, delivered on the Unity main thread
@@ -55,8 +62,8 @@ namespace Ezoic.Cmp
         }
 
         /// <summary>
-        /// The "Privacy settings" entry point; show it while <see cref="IsPrivacyOptionsRequired"/>
-        /// is true. In a GDPR region it reopens the consent dialog with the stored choices (TCF
+        /// The "Privacy settings" entry point; show it unless <see cref="IsPrivacyOptionsRequired"/>
+        /// is false (null means not known yet). In a GDPR region it reopens the consent dialog with the stored choices (TCF
         /// policy requires an always-reachable entry point). In a covered US state it opens the US
         /// privacy settings: <see cref="ConsentOutcome.Decided"/> with
         /// <see cref="ConsentDecision.AcceptAll"/> when saved not opted out,
@@ -69,6 +76,29 @@ namespace Ezoic.Cmp
         {
             PresentConsent(true, onComplete);
         }
+
+#if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
+        /// <summary>
+        /// <see cref="EzoicCmpConfiguration.AutoPresentConsent"/>: the native present waits for the
+        /// settings, and both bridges queue it behind the initialize call, so it can go out at once.
+        /// </summary>
+        private static void PresentAfterInitialize(EzoicCmpConfiguration options)
+        {
+            if (!AutoPresent.TryOpen(options.AutoPresentConsent))
+            {
+                return;
+            }
+
+            var debug = options.DebugEnabled;
+            PresentConsent(false, result =>
+            {
+                if (debug)
+                {
+                    Debug.Log("Ezoic CMP: automatic consent request: " + result);
+                }
+            });
+        }
+#endif
 
 #if UNITY_ANDROID && !UNITY_EDITOR
         /// <summary>Starts the CMP for your Ezoic domain with the given options.</summary>
@@ -103,6 +133,7 @@ namespace Ezoic.Cmp
                     Debug.LogException(e);
                 }
             });
+            PresentAfterInitialize(options);
         }
 
         private static AndroidJavaObject BuildConfiguration(bool cmpEnabled, bool autoReadConsent, bool debugEnabled)
@@ -218,7 +249,9 @@ namespace Ezoic.Cmp
             catch (Exception e)
             {
                 Debug.LogException(e);
+                return;
             }
+            PresentAfterInitialize(options);
         }
 
         private static void PresentConsent(bool settings, Action<ConsentResult> onComplete)

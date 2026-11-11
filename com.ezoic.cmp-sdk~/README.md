@@ -30,12 +30,14 @@ stays off (every request reports `Failed`, nothing is written).
 
 ### 1. Add the package (UPM git URL)
 
-The package lives in the `com.ezoic.cmp-sdk~` folder of the
-[ezoic-unity-sdk](https://github.com/ezoic/ezoic-unity-sdk) repository. In Unity, open
+The package is developed in the `com.ezoic.cmp-sdk~` folder of the
+[ezoic-unity-sdk](https://github.com/ezoic/ezoic-unity-sdk) repository, and each release also
+publishes that folder on its own as the tag `cmp-sdk/vX.Y.Z` (and the branch `upm/cmp-sdk`),
+with the package at the root. In Unity, open
 **Window → Package Manager → + → Add package from git URL…** and enter:
 
 ```
-https://github.com/ezoic/ezoic-unity-sdk.git?path=/com.ezoic.cmp-sdk~#v1.22.0
+https://github.com/ezoic/ezoic-unity-sdk.git#cmp-sdk/v1.22.0
 ```
 
 Or add it to `Packages/manifest.json`:
@@ -43,10 +45,16 @@ Or add it to `Packages/manifest.json`:
 ```json
 {
   "dependencies": {
-    "com.ezoic.cmp-sdk": "https://github.com/ezoic/ezoic-unity-sdk.git?path=/com.ezoic.cmp-sdk~#v1.22.0"
+    "com.ezoic.cmp-sdk": "https://github.com/ezoic/ezoic-unity-sdk.git#cmp-sdk/v1.22.0"
   }
 }
 ```
+
+The `#cmp-sdk/v1.22.0` suffix pins a released version; `#upm/cmp-sdk` tracks the latest release.
+An alternative that installs straight from the `vX.Y.Z` tag,
+`https://github.com/ezoic/ezoic-unity-sdk.git?path=/com.ezoic.cmp-sdk~#v1.22.0`, requires
+Unity to accept the `~` path (Unity normally skips folders ending in `~`); prefer the tag
+above.
 
 ### 2. Native libraries
 
@@ -82,24 +90,35 @@ public class ConsentBootstrap : MonoBehaviour
 {
     void Start()
     {
+        // Loads your Ezoic settings and, with the default AutoPresentConsent, then shows the
+        // consent dialog once if this user must decide.
         EzoicCmp.Initialize("example.com");
-
-        // Waits for the CMP's settings, then shows the dialog only where it is required.
-        EzoicCmp.PresentConsentIfRequired(result =>
-        {
-            // result.Outcome: NotRequired, AlreadyDecided, Decided (see result.Decision),
-            // Dismissed (ask again later), AlreadyPresenting, or Failed (see result.Error).
-            Debug.Log("Consent: " + result);
-        });
     }
 
-    // "Privacy choices" button handler. Show the button while
-    // EzoicCmp.IsPrivacyOptionsRequired == true.
+    // Show the "Privacy choices" button unless EzoicCmp.IsPrivacyOptionsRequired is false
+    // (null means not known yet).
+    public bool ShowPrivacyChoices => EzoicCmp.IsPrivacyOptionsRequired != false;
+
+    // "Privacy choices" button handler.
     public void OnPrivacyChoices()
     {
         EzoicCmp.PresentConsentSettings(result => Debug.Log("Privacy settings: " + result));
     }
 }
+```
+
+To choose the timing yourself or read the result, turn the automatic request off and ask:
+
+```csharp
+EzoicCmp.Initialize("example.com", new EzoicCmpConfiguration { AutoPresentConsent = false });
+
+// Waits for the CMP's settings, then shows the dialog only where it is required.
+EzoicCmp.PresentConsentIfRequired(result =>
+{
+    // result.Outcome: NotRequired, AlreadyDecided, Decided (see result.Decision),
+    // Dismissed (ask again later), AlreadyPresenting, or Failed (see result.Error).
+    Debug.Log("Consent: " + result);
+});
 ```
 
 - **GDPR regions:** `PresentConsentIfRequired` shows the TCF dialog until the user decides.
@@ -116,9 +135,10 @@ Options:
 ```csharp
 EzoicCmp.Initialize("example.com", new EzoicCmpConfiguration
 {
-    CmpEnabled = true,       // run the CMP (default true)
-    AutoReadConsent = true,  // false: your app manages consent; the CMP writes nothing
-    DebugEnabled = false,    // also log the native CMP's debug/info lines
+    CmpEnabled = true,          // run the CMP (default true)
+    AutoReadConsent = true,     // false: your app manages consent; the CMP writes nothing
+    DebugEnabled = false,       // also log the native CMP's debug/info lines
+    AutoPresentConsent = true,  // ask once right after Initialize, if required (default true)
 });
 ```
 
@@ -128,17 +148,20 @@ EzoicCmp.Initialize("example.com", new EzoicCmpConfiguration
 
 | Member | Description |
 | --- | --- |
-| `Initialize(string domain)` / `Initialize(string domain, EzoicCmpConfiguration configuration)` | Start the CMP for your Ezoic domain. Returns at once; settings load in the background. Repeat calls are ignored. |
-| `PresentConsentIfRequired(Action<ConsentResult> onComplete = null)` | Show the consent dialog if this user must decide (GDPR). Call once per launch after `Initialize`. |
+| `Initialize(string domain)` / `Initialize(string domain, EzoicCmpConfiguration configuration)` | Start the CMP for your Ezoic domain. Returns at once; settings load in the background. With `AutoPresentConsent` (default `true`) it then calls `PresentConsentIfRequired` once. Repeat calls are ignored. |
+| `PresentConsentIfRequired(Action<ConsentResult> onComplete = null)` | Show the consent dialog if this user must decide (GDPR). `Initialize` calls it for you unless `AutoPresentConsent` is `false`. |
 | `PresentConsentSettings(Action<ConsentResult> onComplete = null)` | "Privacy settings": TCF dialog in GDPR regions, US privacy settings in covered US states. |
 | `IsConsentRequired` | `bool?`: GDPR applies and the CMP handles consent. `null` while unknown. |
-| `IsPrivacyOptionsRequired` | `bool?`: show a "Privacy choices" entry point (GDPR region or covered US state). `null` while unknown. |
+| `IsPrivacyOptionsRequired` | `bool?`: `true` in a GDPR region or covered US state, `false` elsewhere, `null` while unknown. Show your "Privacy choices" entry point unless it is `false`. |
 | `ResetConsent()` | Delete the stored decision and the US choice; values another CMP wrote are kept. |
 
 `ConsentResult` has `Outcome` (`ConsentOutcome`: `NotRequired`, `AlreadyDecided`, `Decided`,
 `Dismissed`, `AlreadyPresenting`, `Failed`), `Decision` (`ConsentDecision`: `None`,
 `AcceptAll`, `RejectAll`, `Custom`) and `Error` (set when `Outcome` is `Failed`). These match
 `Ezoic.Ads.ConsentResult` in `com.ezoic.ads`.
+
+`Ezoic.Cmp` and `Ezoic.Ads` each define `ConsentResult` / `ConsentOutcome` / `ConsentDecision`,
+so a script that imports both namespaces must qualify them (e.g. `Ezoic.Cmp.ConsentResult`).
 
 ## Samples
 

@@ -216,8 +216,18 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout (full history, for the split)
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Validate both packages and their pins
         run: python3 tools/validate-packages.py
+
+      - name: Validate the com.ezoic.cmp-sdk split the release workflow publishes
+        # Same split as .github/workflows/release.yml, without pushing anything.
+        run: |
+          set -euo pipefail
+          split="$(git subtree split --prefix='com.ezoic.cmp-sdk~' HEAD)"
+          git worktree add --detach "$RUNNER_TEMP/cmp-sdk" "$split"
+          python3 tools/validate-packages.py --standalone-cmp "$RUNNER_TEMP/cmp-sdk"

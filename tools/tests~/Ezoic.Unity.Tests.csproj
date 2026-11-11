@@ -33,6 +33,8 @@
     <Compile Include="../../com.ezoic.cmp-sdk~/Runtime/Android/CmpJniNames.cs" Link="Cmp/CmpJniNames.cs" />
     <Compile Include="../../com.ezoic.cmp-sdk~/Runtime/Android/ConsentOutcomeMapping.cs" Link="Cmp/ConsentOutcomeMapping.cs" />
     <Compile Include="../../com.ezoic.cmp-sdk~/Runtime/iOS/IosAbi.cs" Link="Cmp/IosAbi.cs" />
+    <Compile Include="../../com.ezoic.cmp-sdk~/Runtime/EzoicCmpConfiguration.cs" Link="Cmp/EzoicCmpConfiguration.cs" />
+    <Compile Include="../../com.ezoic.cmp-sdk~/Runtime/AutoPresentGate.cs" Link="Cmp/AutoPresentGate.cs" />
   </ItemGroup>
 
   <ItemGroup>

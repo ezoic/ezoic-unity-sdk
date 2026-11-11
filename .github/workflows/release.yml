@@ -1,0 +1,72 @@
+name: Release
+
+# A vX.Y.Z tag is the release of both packages. com.ezoic.ads is installed straight from that
+# tag (the repository root is the package). com.ezoic.cmp-sdk lives in com.ezoic.cmp-sdk~/,
+# so this workflow publishes that folder on its own with `git subtree split`: the tag
+# cmp-sdk/vX.Y.Z (what the README's install URL names) and the branch upm/cmp-sdk (the
+# latest release), both with the package at their root. Nothing else is published.
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  split-cmp-package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history, for the split)
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Check the tag matches both packages
+        run: python3 tools/validate-packages.py --expect-version "${GITHUB_REF_NAME#v}"
+
+      - name: Split com.ezoic.cmp-sdk~ into its own tree
+        id: split
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          split="$(git subtree split --prefix='com.ezoic.cmp-sdk~' "$GITHUB_SHA")"
+          echo "Split $GITHUB_REF_NAME ($GITHUB_SHA) into $split"
+          echo "sha=$split" >> "$GITHUB_OUTPUT"
+          git worktree add --detach "$RUNNER_TEMP/cmp-sdk" "$split"
+          ls -la "$RUNNER_TEMP/cmp-sdk"
+
+      - name: Validate the split tree as a standalone package
+        run: >-
+          python3 tools/validate-packages.py
+          --standalone-cmp "$RUNNER_TEMP/cmp-sdk"
+          --expect-version "${GITHUB_REF_NAME#v}"
+
+      - name: Push tag cmp-sdk/vX.Y.Z and branch upm/cmp-sdk
+        env:
+          SPLIT: ${{ steps.split.outputs.sha }}
+        run: |
+          set -euo pipefail
+          tag="cmp-sdk/$GITHUB_REF_NAME"
+          existing="$(git ls-remote --tags origin "refs/tags/$tag" | cut -f1)"
+          if [ -n "$existing" ]; then
+            # A published tag never moves; a re-run of the same release is a no-op.
+            if [ "$existing" != "$SPLIT" ]; then
+              echo "::error::$tag already exists at $existing, not $SPLIT; published tags never move"
+              exit 1
+            fi
+            echo "$tag already points at $SPLIT"
+          else
+            git push origin "$SPLIT:refs/tags/$tag"
+          fi
+          # Fast-forward only: a patch release cut from an older line keeps its tag but does
+          # not move the branch backwards.
+          if ! git push origin "$SPLIT:refs/heads/upm/cmp-sdk"; then
+            echo "::warning::upm/cmp-sdk was not fast-forwarded to $SPLIT (an older release line?); $tag is published"
+          fi

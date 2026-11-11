@@ -217,8 +217,8 @@ So:
 1. **Ask for consent once per launch, right after `Initialize`.** You don't need to wait for
    the init callback; the request waits for initialization to finish. In US states it reports
    `NotRequired`, because the SDK shows the notice itself.
-2. **Add a "Privacy settings" button** that calls `PresentConsentSettings`, and show it while
-   `EzoicAds.IsPrivacyOptionsRequired` is `true`. In GDPR regions it reopens the TCF dialog
+2. **Add a "Privacy settings" button** that calls `PresentConsentSettings`, and show it unless
+   `EzoicAds.IsPrivacyOptionsRequired` is `false` (`null` means not known yet). In GDPR regions it reopens the TCF dialog
    (TCF policy requires users to be able to change or withdraw consent at any time); in covered
    US states it opens the US privacy settings, reporting `Decided` with `AcceptAll` (not opted
    out) or `RejectAll` (opted out of sale/sharing), or `Dismissed` when closed without saving.
@@ -236,9 +236,9 @@ EzoicAds.PresentConsentIfRequired(result =>
 // "Privacy settings" button handler:
 EzoicAds.PresentConsentSettings(result => Debug.Log("Consent settings: " + result));
 
-// Show the button only where it applies: GDPR regions and covered US states
-// (null until initialization and the US-state settings have loaded):
-bool showPrivacyButton = EzoicAds.IsPrivacyOptionsRequired == true;
+// Hide the button only where it doesn't apply (false). null means not known yet
+// (initialization or the US-state settings are still loading), so keep it visible:
+bool showPrivacyButton = EzoicAds.IsPrivacyOptionsRequired != false;
 ```
 
 Calling `PresentConsentIfRequired` again is harmless: it reports `AlreadyPresenting` while a
@@ -252,17 +252,20 @@ the SDK then reads that CMP's `IABTCF_*` / `IABGPP_*` values:
 EzoicAds.Initialize(new EzoicConfiguration("example.com") { CmpEnabled = false }, (success, error) => { /* ... */ });
 ```
 
-**Manual consent.** You can also pass consent signals yourself. `SetGDPRConsent` makes the
+**Manual consent.** You can also pass consent signals yourself. `SetGDPRConsent` writes your
+values to `IABTCF_gdprApplies` and `IABTCF_TCString` (since native 1.19.0) and makes the
 built-in dialog stand down, but only for the current launch, so call it **before**
 `Initialize` on every launch (or set `CmpEnabled = false`):
 
 ```csharp
 EzoicAds.SetGDPRConsent(true, tcfConsentString);
-EzoicAds.SetGPPConsent(gppString, "7");   // applicable GPP section IDs
+EzoicAds.SetGPPConsent("DBABBg~BVoAAACA.QA", "8");   // GPP string and applicable section IDs
 EzoicAds.SetSubjectToCOPPA(false);
 ```
 
-After `SetGPPConsent`, the built-in CMP leaves the `IABGPP_*` values to your app.
+The GPP section depends on the user's state (`8` is California's); pass the sections your
+string contains. After `SetGPPConsent`, the built-in CMP leaves the `IABGPP_*` values to your
+app.
 
 **Standalone consent.** An Ezoic publisher's app that shows no Ezoic ads can use the same CMP
 through the separate `com.ezoic.cmp-sdk` package instead; see
@@ -413,9 +416,9 @@ platform that is not yet supported:
 | `PresentConsentIfRequired(Action<ConsentResult> onComplete = null)` | Show the built-in consent dialog if this user must decide. Call once per launch right after `Initialize`. |
 | `PresentConsentSettings(Action<ConsentResult> onComplete = null)` | "Privacy settings": reopens the TCF dialog in GDPR regions, opens the US privacy settings in covered US states. |
 | `IsConsentRequired` | `bool?`: `true` when GDPR applies and the built-in dialog is in charge; `null` until initialization completes. |
-| `IsPrivacyOptionsRequired` | `bool?`: `true` in a GDPR region or a covered US state while the built-in CMP is in charge (show your "Privacy settings" button); `null` while unknown. |
+| `IsPrivacyOptionsRequired` | `bool?`: `true` in a GDPR region or a covered US state while the built-in CMP is in charge, `false` elsewhere, `null` while unknown. Show your "Privacy settings" button unless it is `false`. |
 | `ResetConsent()` | Delete the built-in dialog's stored decision so it is shown again. |
-| `SetGDPRConsent(bool applies, string consentString)` | Set GDPR/TCF consent manually (call before `Initialize`; the built-in dialog stands down for this launch). |
+| `SetGDPRConsent(bool applies, string consentString)` | Set GDPR/TCF consent manually: written to `IABTCF_gdprApplies` / `IABTCF_TCString` (call before `Initialize`; the built-in dialog stands down for this launch). |
 | `SetGPPConsent(string gppString, string sectionIds)` | Set GPP consent. |
 | `SetSubjectToCOPPA(bool subject)` | Flag child-directed treatment. |
 | `SetAppContent(string language, string genre)` | Describe the app's content to bidders (ISO-639-1 language, free-text genre); `null` for both clears it. |
@@ -447,10 +450,12 @@ Same shape as `EzoicInterstitialAd`, plus `OnUserEarnedReward(string type, int a
 ## Standalone consent package (`com.ezoic.cmp-sdk`)
 
 For Ezoic publishers' apps that show **no Ezoic ads**, this repository also ships the CMP on its
-own as the `com.ezoic.cmp-sdk` package (namespace `Ezoic.Cmp`), released from the same tag:
+own as the `com.ezoic.cmp-sdk` package (namespace `Ezoic.Cmp`), released at the same version.
+Each `vX.Y.Z` release also publishes it on its own as the tag `cmp-sdk/vX.Y.Z` (and the branch
+`upm/cmp-sdk`), whose root is the package:
 
 ```
-https://github.com/ezoic/ezoic-unity-sdk.git?path=/com.ezoic.cmp-sdk~#v1.22.0
+https://github.com/ezoic/ezoic-unity-sdk.git#cmp-sdk/v1.22.0
 ```
 
 `EzoicCmp` has the same consent members as `EzoicAds` (`Initialize(domain)`,
@@ -458,6 +463,9 @@ https://github.com/ezoic/ezoic-unity-sdk.git?path=/com.ezoic.cmp-sdk~#v1.22.0
 `IsPrivacyOptionsRequired`, `ResetConsent`) and the same `ConsentResult` shape. It depends only
 on the native consent library (`com.ezoic.sdk:ezoic-cmp-sdk` / the `EzoicCmpSDK` Swift package
 product). See [its README](com.ezoic.cmp-sdk~/README.md).
+
+`Ezoic.Cmp` and `Ezoic.Ads` each define `ConsentResult` / `ConsentOutcome` / `ConsentDecision`,
+so a script that imports both namespaces must qualify them (e.g. `Ezoic.Ads.ConsentResult`).
 
 **Use one package.** `com.ezoic.ads` already includes the CMP. If an app installs both, each
 native library is still linked once (Gradle resolves one `ezoic-cmp-sdk`; EDM merges both

@@ -84,8 +84,9 @@ namespace Ezoic.Cmp.Samples
             GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal();
-            // In a real app, show this entry point while IsPrivacyOptionsRequired is true (GDPR
-            // regions and covered US states). The demo keeps it enabled everywhere.
+            // In a real app, show this entry point unless IsPrivacyOptionsRequired is false
+            // (false outside GDPR regions and covered US states). The demo keeps it enabled
+            // everywhere.
             if (GUILayout.Button("Privacy settings"))
             {
                 Log("PresentConsentSettings()…");
@@ -115,7 +116,9 @@ namespace Ezoic.Cmp.Samples
         {
             _initialized = true;
             Log("Initialize(\"" + domain + "\").");
-            EzoicCmp.Initialize(domain);
+            // AutoPresentConsent (default true) would ask on its own right after Initialize; the
+            // demo asks itself so it can log the result.
+            EzoicCmp.Initialize(domain, new EzoicCmpConfiguration { AutoPresentConsent = false });
 
             // Waits for the CMP's settings to load and shows the dialog only where it is
             // required (GDPR regions). In covered US states the CMP shows its notice by itself.

@@ -126,9 +126,10 @@ namespace Ezoic.Ads.Samples
             bool? options = EzoicAds.IsPrivacyOptionsRequired;
             GUILayout.Label("Consent required: " + Describe(required) + "   |   Privacy options required: " + Describe(options));
             GUILayout.BeginHorizontal();
-            // In a real app, show this entry point while IsPrivacyOptionsRequired is true (GDPR
-            // regions and covered US states); TCF requires it to be always reachable there. The
-            // demo keeps it enabled everywhere so you can try it on any device.
+            // In a real app, show this entry point unless IsPrivacyOptionsRequired is false
+            // (false outside GDPR regions and covered US states); TCF requires it to be always
+            // reachable there. The demo keeps it enabled everywhere so you can try it on any
+            // device.
             if (GUILayout.Button("Privacy settings"))
             {
                 Log("PresentConsentSettings()…");

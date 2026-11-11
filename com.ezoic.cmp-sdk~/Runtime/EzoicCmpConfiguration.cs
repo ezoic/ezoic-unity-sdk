@@ -21,5 +21,14 @@ namespace Ezoic.Cmp
         /// are always logged. Default <c>false</c>.
         /// </summary>
         public bool DebugEnabled { get; set; }
+
+        /// <summary>
+        /// Default <c>true</c>: right after <see cref="EzoicCmp.Initialize(string, EzoicCmpConfiguration)"/>
+        /// the package calls <see cref="EzoicCmp.PresentConsentIfRequired"/> once for you, so the
+        /// consent dialog shows when this user must decide. Set to <c>false</c> to choose the
+        /// timing yourself or to read the result; then call
+        /// <see cref="EzoicCmp.PresentConsentIfRequired"/> after initializing.
+        /// </summary>
+        public bool AutoPresentConsent { get; set; } = true;
     }
 }

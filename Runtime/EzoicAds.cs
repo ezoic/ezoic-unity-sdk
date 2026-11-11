@@ -52,8 +52,8 @@ namespace Ezoic.Ads
         }
 
         /// <summary>
-        /// The "Privacy settings" entry point; show it while <see cref="IsPrivacyOptionsRequired"/>
-        /// is true. In a GDPR region it reopens the consent dialog with the user's stored choices
+        /// The "Privacy settings" entry point; show it unless <see cref="IsPrivacyOptionsRequired"/>
+        /// is false (null means not known yet). In a GDPR region it reopens the consent dialog with the user's stored choices
         /// so they can change or withdraw consent (TCF policy requires an always-reachable entry
         /// point). In a covered US state it opens the US privacy settings: the result is
         /// <see cref="ConsentOutcome.Decided"/> with <see cref="ConsentDecision.AcceptAll"/> when
@@ -314,10 +314,11 @@ namespace Ezoic.Ads
         }
 
         /// <summary>
-        /// Sets GDPR consent manually. While in effect the built-in consent dialog stands down
-        /// (no gating, dialog, or <c>IABTCF_*</c> writes). It lasts for the current app launch
-        /// only: call it before <see cref="Initialize(EzoicConfiguration, Action{bool, string})"/>
-        /// on every launch, or set <see cref="EzoicConfiguration.CmpEnabled"/> to false.
+        /// Sets GDPR consent manually. The SDK writes the values to <c>IABTCF_gdprApplies</c> and
+        /// <c>IABTCF_TCString</c>, and while in effect the built-in consent dialog stands down (no
+        /// gating, no dialog, no writes of its own). It lasts for the current app launch only:
+        /// call it before <see cref="Initialize(EzoicConfiguration, Action{bool, string})"/> on
+        /// every launch, or set <see cref="EzoicConfiguration.CmpEnabled"/> to false.
         /// </summary>
         /// <param name="applies">Whether GDPR applies to this user.</param>
         /// <param name="consentString">IAB TCF consent string.</param>
@@ -341,9 +342,13 @@ namespace Ezoic.Ads
             });
         }
 
-        /// <summary>Sets GPP (Global Privacy Platform) consent.</summary>
-        /// <param name="gppString">GPP string.</param>
-        /// <param name="sectionIds">Applicable GPP section IDs.</param>
+        /// <summary>
+        /// Sets GPP (Global Privacy Platform) consent. The built-in CMP then leaves the
+        /// <c>IABGPP_*</c> values to your app.
+        /// </summary>
+        /// <param name="gppString">GPP string, e.g. <c>"DBABBg~BVoAAACA.QA"</c>.</param>
+        /// <param name="sectionIds">Applicable GPP section IDs, e.g. <c>"8"</c> (California);
+        /// they depend on the user's state.</param>
         public static void SetGPPConsent(string gppString, string sectionIds)
         {
             EzoicMainThreadDispatcher.Init();
@@ -562,10 +567,11 @@ namespace Ezoic.Ads
         }
 
         /// <summary>
-        /// Sets GDPR consent manually. While in effect the built-in consent dialog stands down
-        /// (no gating, dialog, or <c>IABTCF_*</c> writes). It lasts for the current app launch
-        /// only: call it before <see cref="Initialize(EzoicConfiguration, Action{bool, string})"/>
-        /// on every launch, or set <see cref="EzoicConfiguration.CmpEnabled"/> to false.
+        /// Sets GDPR consent manually. The SDK writes the values to <c>IABTCF_gdprApplies</c> and
+        /// <c>IABTCF_TCString</c>, and while in effect the built-in consent dialog stands down (no
+        /// gating, no dialog, no writes of its own). It lasts for the current app launch only:
+        /// call it before <see cref="Initialize(EzoicConfiguration, Action{bool, string})"/> on
+        /// every launch, or set <see cref="EzoicConfiguration.CmpEnabled"/> to false.
         /// </summary>
         /// <param name="applies">Whether GDPR applies to this user.</param>
         /// <param name="consentString">IAB TCF consent string.</param>
@@ -582,9 +588,13 @@ namespace Ezoic.Ads
             }
         }
 
-        /// <summary>Sets GPP (Global Privacy Platform) consent.</summary>
-        /// <param name="gppString">GPP string.</param>
-        /// <param name="sectionIds">Applicable GPP section IDs.</param>
+        /// <summary>
+        /// Sets GPP (Global Privacy Platform) consent. The built-in CMP then leaves the
+        /// <c>IABGPP_*</c> values to your app.
+        /// </summary>
+        /// <param name="gppString">GPP string, e.g. <c>"DBABBg~BVoAAACA.QA"</c>.</param>
+        /// <param name="sectionIds">Applicable GPP section IDs, e.g. <c>"8"</c> (California);
+        /// they depend on the user's state.</param>
         public static void SetGPPConsent(string gppString, string sectionIds)
         {
             EzoicMainThreadDispatcher.Init();
