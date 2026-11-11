@@ -120,6 +120,7 @@ jobs:
             echo "Auditing com.ezoic.sdk:$artifact:$ads_version"
             curl -fL -o "$artifact.aar" \
               "https://repo1.maven.org/maven2/com/ezoic/sdk/$artifact/$ads_version/$artifact-$ads_version.aar"
+            mkdir -p "aar_extract/$artifact"
             unzip -o "$artifact.aar" classes.jar -d "aar_extract/$artifact"
             mkdir -p "aar_classes/$artifact"
             (cd "aar_classes/$artifact" && jar xf "../../aar_extract/$artifact/classes.jar")
