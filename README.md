@@ -142,7 +142,7 @@ project and drops the package, so use **Append** or add it again.
 **CocoaPods is not supported from 1.22.0.** CocoaPods trunk stopped receiving Ezoic releases
 at 1.19.1 and becomes read-only on December 2, 2026, and this package's bridge needs the 1.22.0
 native API. `Editor/EzoicDependencies.xml` therefore declares no CocoaPod: with Swift Package
-Manager Integration off, or an EDM4U older than 1.2.187, EDM adds no Ezoic library and the
+Manager Integration off, or an EDM4U older than 1.2.189, EDM adds no Ezoic library and the
 Xcode build fails with `no such module 'EzoicAdsSDK'`. Turn the integration on (Option A) or
 add the package in Xcode (Option B). Remove any `pod 'EzoicAdsSDK'` line you added to a
 `Podfile` yourself.

@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - iOS: a `ConsentResult` with `Outcome == Failed` always carries an `Error` message, and an outcome value this package does not know reads as `Dismissed`.
 
 ### Removed
-- The iOS CocoaPods fallback (`iosPod EzoicAdsSDK ~> 1.19` in `Editor/EzoicDependencies.xml`). CocoaPods trunk stopped receiving Ezoic releases at 1.19.1 and becomes read-only on December 2, 2026, and this package's bridge needs the 1.22.0 API. iOS needs the Swift package: keep **Swift Package Manager Integration** on in EDM's iOS Resolver (EDM4U 1.2.187+, Unity's EDM 2.1+), or add the package in Xcode (see the README). Remove any `pod 'EzoicAdsSDK'` line from a hand-edited `Podfile`.
+- The iOS CocoaPods fallback (`iosPod EzoicAdsSDK ~> 1.19` in `Editor/EzoicDependencies.xml`). CocoaPods trunk stopped receiving Ezoic releases at 1.19.1 and becomes read-only on December 2, 2026, and this package's bridge needs the 1.22.0 API. iOS needs the Swift package: keep **Swift Package Manager Integration** on in EDM's iOS Resolver (EDM4U 1.2.189+, Unity's EDM 2.1+), or add the package in Xcode (see the README). Remove any `pod 'EzoicAdsSDK'` line from a hand-edited `Podfile`.
 
 ## [1.21.0] - 2026-11-04
 

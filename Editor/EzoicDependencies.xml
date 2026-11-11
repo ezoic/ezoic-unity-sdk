@@ -5,7 +5,7 @@
   generated builds: the Android Resolver adds the Maven package to Gradle
   (com.ezoic.sdk:ezoic-cmp-sdk comes with it), and the iOS Resolver adds the
   Swift package to the generated Xcode project. iOS needs Swift Package Manager
-  Integration on (EDM4U 1.2.187+, Unity's EDM 2.1+): from 1.22.0 there is no
+  Integration on (EDM4U 1.2.189+, Unity's EDM 2.1+): from 1.22.0 there is no
   CocoaPod to fall back to, because CocoaPods trunk stopped at 1.19.1.
   If your project does not use EDM, add the equivalent dependencies to your
   mainTemplate.gradle / Xcode project manually (see README).
