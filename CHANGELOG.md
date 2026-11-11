@@ -5,6 +5,22 @@ All notable changes to the Ezoic Ads Unity SDK are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.22.0] - Unreleased
+
+### Added
+- `EzoicAds.IsPrivacyOptionsRequired` (`bool?`): `true` in a GDPR region or a covered US state while the built-in CMP is in charge, so you know when to show a "Privacy settings" button; `null` while unknown.
+- `EzoicAds.SetAppContent(string language, string genre)` describes the app's content to bidders (OpenRTB `app.content`; ISO-639-1 language, free-text genre; `null` for both clears it), and `EzoicConfiguration.AppPaid` (`bool?`, default `null`: not sent) sets OpenRTB `app.paid`.
+- US-state privacy (native 1.22.0, no code change): in the 15 covered US states the SDK shows a privacy notice card by itself each launch until the user chooses **Consent** or **Do Not Sell My Information**, and writes the IAB GPP (`IABGPP_*`) values. Ads never wait for it. After an opt-out, Google Ad Manager requests carry restricted data processing.
+- `PresentConsentSettings` is region-aware: in covered US states it opens the US privacy settings and reports `Decided` with `AcceptAll` (not opted out) or `RejectAll` (opted out), or `Dismissed`. In GDPR regions it reopens the TCF dialog, as before. `PresentConsentIfRequired` reports `NotRequired` in US states. There are no new `ConsentOutcome` values.
+- New package **`com.ezoic.cmp-sdk`** in this repository (`com.ezoic.cmp-sdk~/`), for Ezoic publishers' apps that show no Ezoic ads: `EzoicCmp` with the same consent members and `ConsentResult` shape, on the native `com.ezoic.sdk:ezoic-cmp-sdk` / `EzoicCmpSDK` libraries. Each release publishes it on its own as the tag `cmp-sdk/vX.Y.Z` (and the branch `upm/cmp-sdk`); install it with `https://github.com/ezoic/ezoic-unity-sdk.git#cmp-sdk/v1.22.0`. Its `EzoicCmpConfiguration.AutoPresentConsent` (default `true`) asks for consent once right after `Initialize`. `Ezoic.Cmp` and `Ezoic.Ads` both define `ConsentResult` / `ConsentOutcome` / `ConsentDecision`, so a script importing both namespaces must qualify them. Use one of the two packages; if an app installs both, each native library is linked once and `EzoicAds` takes the CMP over.
+
+### Changed
+- Native pins bumped to `com.ezoic.sdk:ezoic-ads-sdk:1.22.0` and the `EzoicAdsSDK` Swift package 1.22.0 (up to next major). The native consent code moved into its own library, `com.ezoic.sdk:ezoic-cmp-sdk:1.22.0` / the `EzoicCmpSDK` module, which the ads library brings in; its Java package and Swift types keep their names, and nothing changes for code that only uses this package's C# API. If your own Swift code reads `.failed(let error)` from the native `ConsentOutcome`, its type is now `Error`: read the code with `(error as? EzoicErrorCode)?.code`.
+- iOS: a `ConsentResult` with `Outcome == Failed` always carries an `Error` message, and an outcome value this package does not know reads as `Dismissed`.
+
+### Removed
+- The iOS CocoaPods fallback (`iosPod EzoicAdsSDK ~> 1.19` in `Editor/EzoicDependencies.xml`). CocoaPods trunk stopped receiving Ezoic releases at 1.19.1 and becomes read-only on December 2, 2026, and this package's bridge needs the 1.22.0 API. iOS needs the Swift package: keep **Swift Package Manager Integration** on in EDM's iOS Resolver (EDM4U 1.2.189+, Unity's EDM 2.1+), or add the package in Xcode (see the README). Remove any `pod 'EzoicAdsSDK'` line from a hand-edited `Podfile`.
+
 ## [1.21.0] - 2026-11-04
 
 ### Changed

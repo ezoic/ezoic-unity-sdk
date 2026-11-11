@@ -41,6 +41,8 @@ namespace Ezoic.Ads
         /// a previous request ended with <see cref="ConsentOutcome.Dismissed"/> or
         /// <see cref="ConsentOutcome.Failed"/>. Does nothing outside GDPR regions, when
         /// <see cref="EzoicConfiguration.CmpEnabled"/> is false, or after <see cref="SetGDPRConsent"/>.
+        /// In covered US states it reports <see cref="ConsentOutcome.NotRequired"/>: the SDK shows
+        /// its US privacy notice by itself, and ads never wait for it.
         /// </summary>
         /// <param name="onComplete">Optional result callback, delivered on the Unity main thread
         /// after the dialog (if any) has closed.</param>
@@ -50,11 +52,16 @@ namespace Ezoic.Ads
         }
 
         /// <summary>
-        /// Reopens the consent dialog with the user's stored choices so they can change or
-        /// withdraw consent. TCF policy requires an always-reachable "Privacy settings" entry
-        /// point that calls this. Reports <see cref="ConsentOutcome.NotRequired"/> outside GDPR
-        /// regions, when <see cref="EzoicConfiguration.CmpEnabled"/> is false, when another CMP
-        /// is present, or after <see cref="SetGDPRConsent"/>.
+        /// The "Privacy settings" entry point; show it unless <see cref="IsPrivacyOptionsRequired"/>
+        /// is false (null means not known yet). In a GDPR region it reopens the consent dialog with the user's stored choices
+        /// so they can change or withdraw consent (TCF policy requires an always-reachable entry
+        /// point). In a covered US state it opens the US privacy settings: the result is
+        /// <see cref="ConsentOutcome.Decided"/> with <see cref="ConsentDecision.AcceptAll"/> when
+        /// saved not opted out, <see cref="ConsentDecision.RejectAll"/> when saved opted out ("Do
+        /// Not Sell"), or <see cref="ConsentOutcome.Dismissed"/> when closed without saving.
+        /// Reports <see cref="ConsentOutcome.NotRequired"/> elsewhere, when
+        /// <see cref="EzoicConfiguration.CmpEnabled"/> is false, when another CMP is present, or
+        /// after <see cref="SetGDPRConsent"/>.
         /// </summary>
         /// <param name="onComplete">Optional result callback, delivered on the Unity main thread.</param>
         public static void PresentConsentSettings(Action<ConsentResult> onComplete = null)
@@ -85,6 +92,7 @@ namespace Ezoic.Ads
             }
 
             var cmpEnabled = configuration.CmpEnabled;
+            var appPaid = configuration.AppPaid;
             Action onSuccess = () =>
             {
                 _initialized = true;
@@ -114,7 +122,7 @@ namespace Ezoic.Ads
                     using (var application = AndroidBridge.Activity.Call<AndroidJavaObject>(JniNames.Framework.getApplication))
                     using (var sdkClass = new AndroidJavaClass(JniNames.EzoicAds.Class))
                     using (var instance = sdkClass.CallStatic<AndroidJavaObject>(JniNames.EzoicAds.getInstance))
-                    using (var nativeConfiguration = BuildConfiguration(domain, cmpEnabled))
+                    using (var nativeConfiguration = BuildConfiguration(domain, cmpEnabled, appPaid))
                     {
                         instance.Call(JniNames.EzoicAds.initializeWithCallback, application, nativeConfiguration, proxy);
                     }
@@ -127,13 +135,18 @@ namespace Ezoic.Ads
             });
         }
 
-        private static AndroidJavaObject BuildConfiguration(string domain, bool cmpEnabled)
+        private static AndroidJavaObject BuildConfiguration(string domain, bool cmpEnabled, bool? appPaid)
         {
             using (var builder = new AndroidJavaObject(JniNames.EzoicConfigurationBuilder.Class))
             {
                 // Each fluent call returns the builder again as a new JNI reference.
                 builder.Call<AndroidJavaObject>(JniNames.EzoicConfigurationBuilder.domain, domain).Dispose();
                 builder.Call<AndroidJavaObject>(JniNames.EzoicConfigurationBuilder.cmpEnabled, cmpEnabled).Dispose();
+                // Unset stays unset: the native default sends no app.paid.
+                if (appPaid.HasValue)
+                {
+                    builder.Call<AndroidJavaObject>(JniNames.EzoicConfigurationBuilder.appPaid, appPaid.Value).Dispose();
+                }
                 return builder.Call<AndroidJavaObject>(JniNames.EzoicConfigurationBuilder.build);
             }
         }
@@ -218,6 +231,67 @@ namespace Ezoic.Ads
             }
         }
 
+        /// <summary>
+        /// Whether to show a "Privacy choices" entry point that calls
+        /// <see cref="PresentConsentSettings"/>: true in a GDPR region or a covered US state while
+        /// the built-in consent management is in charge, false otherwise. <c>null</c> while
+        /// unknown (until initialization and the US-state settings have loaded, or when Ezoic sent
+        /// no consent information).
+        /// </summary>
+        public static bool? IsPrivacyOptionsRequired
+        {
+            get
+            {
+                // The native getter reads volatile state, so it does not need the UI thread.
+                try
+                {
+                    using (var sdkClass = new AndroidJavaClass(JniNames.EzoicAds.Class))
+                    using (var instance = sdkClass.CallStatic<AndroidJavaObject>(JniNames.EzoicAds.getInstance))
+                    using (var required = instance.Call<AndroidJavaObject>(JniNames.EzoicAds.isPrivacyOptionsRequired))
+                    {
+                        return required == null ? (bool?)null : required.Call<bool>(JniNames.Framework.booleanValue);
+                    }
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e);
+                    return null;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Describes the app's content to bidders (OpenRTB <c>app.content</c>), replacing any
+        /// previous value; every later ad request carries it. <paramref name="language"/> is an
+        /// ISO-639-1 two-letter code (<c>"en"</c>, <c>"de"</c>); other values are dropped with a
+        /// native warning. <paramref name="genre"/> is free text (e.g. <c>"Puzzle"</c>). Null or
+        /// blank values are omitted; null for both clears it. Can be called before
+        /// <see cref="Initialize(EzoicConfiguration, Action{bool, string})"/>.
+        /// </summary>
+        public static void SetAppContent(string language, string genre)
+        {
+            EzoicMainThreadDispatcher.Init();
+            // The native SDK treats blank like null; passing "" keeps JNI from having to
+            // resolve setAppContent from untyped null arguments.
+            var lang = language ?? string.Empty;
+            var gen = genre ?? string.Empty;
+            AndroidBridge.RunOnUiThread(() =>
+            {
+                try
+                {
+                    using (var sdkClass = new AndroidJavaClass(JniNames.EzoicAds.Class))
+                    using (var instance = sdkClass.CallStatic<AndroidJavaObject>(JniNames.EzoicAds.getInstance))
+                    {
+                        instance.Call(JniNames.EzoicAds.setAppContent, lang, gen);
+                    }
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e);
+                }
+            });
+        }
+
         /// <summary>Tracks a pageview (Ezoic session/analytics signal).</summary>
         public static void TrackPageview()
         {
@@ -240,10 +314,11 @@ namespace Ezoic.Ads
         }
 
         /// <summary>
-        /// Sets GDPR consent manually. While in effect the built-in consent dialog stands down
-        /// (no gating, dialog, or <c>IABTCF_*</c> writes). It lasts for the current app launch
-        /// only: call it before <see cref="Initialize(EzoicConfiguration, Action{bool, string})"/>
-        /// on every launch, or set <see cref="EzoicConfiguration.CmpEnabled"/> to false.
+        /// Sets GDPR consent manually. The SDK writes the values to <c>IABTCF_gdprApplies</c> and
+        /// <c>IABTCF_TCString</c>, and while in effect the built-in consent dialog stands down (no
+        /// gating, no dialog, no writes of its own). It lasts for the current app launch only:
+        /// call it before <see cref="Initialize(EzoicConfiguration, Action{bool, string})"/> on
+        /// every launch, or set <see cref="EzoicConfiguration.CmpEnabled"/> to false.
         /// </summary>
         /// <param name="applies">Whether GDPR applies to this user.</param>
         /// <param name="consentString">IAB TCF consent string.</param>
@@ -267,9 +342,13 @@ namespace Ezoic.Ads
             });
         }
 
-        /// <summary>Sets GPP (Global Privacy Platform) consent.</summary>
-        /// <param name="gppString">GPP string.</param>
-        /// <param name="sectionIds">Applicable GPP section IDs.</param>
+        /// <summary>
+        /// Sets GPP (Global Privacy Platform) consent. The built-in CMP then leaves the
+        /// <c>IABGPP_*</c> values to your app.
+        /// </summary>
+        /// <param name="gppString">GPP string, e.g. <c>"DBABBg~BVoAAACA.QA"</c>.</param>
+        /// <param name="sectionIds">Applicable GPP section IDs, e.g. <c>"8"</c> (California);
+        /// they depend on the user's state.</param>
         public static void SetGPPConsent(string gppString, string sectionIds)
         {
             EzoicMainThreadDispatcher.Init();
@@ -358,6 +437,7 @@ namespace Ezoic.Ads
                 IosBridge.Initialize(
                     domain,
                     configuration.CmpEnabled,
+                    configuration.AppPaid,
                     () =>
                     {
                         _initialized = true;
@@ -428,6 +508,50 @@ namespace Ezoic.Ads
             }
         }
 
+        /// <summary>
+        /// Whether to show a "Privacy choices" entry point that calls
+        /// <see cref="PresentConsentSettings"/>: true in a GDPR region or a covered US state while
+        /// the built-in consent management is in charge, false otherwise. <c>null</c> while
+        /// unknown (until initialization and the US-state settings have loaded, or when Ezoic sent
+        /// no consent information).
+        /// </summary>
+        public static bool? IsPrivacyOptionsRequired
+        {
+            get
+            {
+                try
+                {
+                    return IosBridge.IsPrivacyOptionsRequired();
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e);
+                    return null;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Describes the app's content to bidders (OpenRTB <c>app.content</c>), replacing any
+        /// previous value; every later ad request carries it. <paramref name="language"/> is an
+        /// ISO-639-1 two-letter code (<c>"en"</c>, <c>"de"</c>); other values are dropped with a
+        /// native warning. <paramref name="genre"/> is free text (e.g. <c>"Puzzle"</c>). Null or
+        /// blank values are omitted; null for both clears it. Can be called before
+        /// <see cref="Initialize(EzoicConfiguration, Action{bool, string})"/>.
+        /// </summary>
+        public static void SetAppContent(string language, string genre)
+        {
+            EzoicMainThreadDispatcher.Init();
+            try
+            {
+                IosBridge.SetAppContent(language, genre);
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+            }
+        }
+
         /// <summary>Tracks a pageview (Ezoic session/analytics signal).</summary>
         public static void TrackPageview()
         {
@@ -443,10 +567,11 @@ namespace Ezoic.Ads
         }
 
         /// <summary>
-        /// Sets GDPR consent manually. While in effect the built-in consent dialog stands down
-        /// (no gating, dialog, or <c>IABTCF_*</c> writes). It lasts for the current app launch
-        /// only: call it before <see cref="Initialize(EzoicConfiguration, Action{bool, string})"/>
-        /// on every launch, or set <see cref="EzoicConfiguration.CmpEnabled"/> to false.
+        /// Sets GDPR consent manually. The SDK writes the values to <c>IABTCF_gdprApplies</c> and
+        /// <c>IABTCF_TCString</c>, and while in effect the built-in consent dialog stands down (no
+        /// gating, no dialog, no writes of its own). It lasts for the current app launch only:
+        /// call it before <see cref="Initialize(EzoicConfiguration, Action{bool, string})"/> on
+        /// every launch, or set <see cref="EzoicConfiguration.CmpEnabled"/> to false.
         /// </summary>
         /// <param name="applies">Whether GDPR applies to this user.</param>
         /// <param name="consentString">IAB TCF consent string.</param>
@@ -463,9 +588,13 @@ namespace Ezoic.Ads
             }
         }
 
-        /// <summary>Sets GPP (Global Privacy Platform) consent.</summary>
-        /// <param name="gppString">GPP string.</param>
-        /// <param name="sectionIds">Applicable GPP section IDs.</param>
+        /// <summary>
+        /// Sets GPP (Global Privacy Platform) consent. The built-in CMP then leaves the
+        /// <c>IABGPP_*</c> values to your app.
+        /// </summary>
+        /// <param name="gppString">GPP string, e.g. <c>"DBABBg~BVoAAACA.QA"</c>.</param>
+        /// <param name="sectionIds">Applicable GPP section IDs, e.g. <c>"8"</c> (California);
+        /// they depend on the user's state.</param>
         public static void SetGPPConsent(string gppString, string sectionIds)
         {
             EzoicMainThreadDispatcher.Init();
@@ -551,6 +680,16 @@ namespace Ezoic.Ads
 
         /// <summary>Always null on unsupported platforms.</summary>
         public static bool? IsConsentRequired => null;
+
+        /// <summary>Always null on unsupported platforms.</summary>
+        public static bool? IsPrivacyOptionsRequired => null;
+
+        /// <summary>No-op on unsupported platforms.</summary>
+        public static void SetAppContent(string language, string genre)
+        {
+            EzoicMainThreadDispatcher.Init();
+            WarnOnce();
+        }
 
         /// <summary>No-op on unsupported platforms.</summary>
         public static void TrackPageview()

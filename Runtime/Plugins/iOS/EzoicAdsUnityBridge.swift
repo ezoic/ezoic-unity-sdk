@@ -38,8 +38,9 @@
 
 import Foundation
 import UIKit
-// The CocoaPod (EDM4U / Podfile installs) vends only EzoicAdsSDKBinary; a source
-// build of ezoic-swift-sdk vends only EzoicAdsSDK.
+// The prebuilt XCFramework's module is EzoicAdsSDKBinary (a hand-vendored or
+// CocoaPods-style install); the Swift package's product is EzoicAdsSDK. Both
+// re-export the CMP module, where ConsentOutcome lives from 1.22.0.
 #if canImport(EzoicAdsSDKBinary)
 import EzoicAdsSDKBinary
 #else
@@ -428,11 +429,13 @@ public func ezoic_unity_rewarded_set_callbacks(_ onLoaded: IdCallback?,
 
 // MARK: - SDK lifecycle / global.
 
+/// `appPaid` is a tri-state: -1 unset (nothing sent), 0 free, 1 paid.
 @_cdecl("ezoic_unity_init")
-public func ezoic_unity_init(_ callId: Int32, _ domain: UnsafePointer<CChar>?, _ cmpEnabled: Int32) {
+public func ezoic_unity_init(_ callId: Int32, _ domain: UnsafePointer<CChar>?, _ cmpEnabled: Int32, _ appPaid: Int32) {
     let domainString = domain.map { String(cString: $0) } ?? ""
+    let paid: Bool? = appPaid < 0 ? nil : appPaid != 0
     DispatchQueue.main.async {
-        let configuration = EzoicConfiguration(domain: domainString, cmpEnabled: cmpEnabled != 0)
+        let configuration = EzoicConfiguration(domain: domainString, cmpEnabled: cmpEnabled != 0, appPaid: paid)
         EzoicAds.shared.initialize(with: configuration) { result in
             // The SDK may complete off the main thread; re-hop so the callback
             // fires under the threading invariant.
@@ -474,6 +477,15 @@ public func ezoic_unity_set_gpp_consent(_ gppString: UnsafePointer<CChar>?, _ se
     }
 }
 
+@_cdecl("ezoic_unity_set_app_content")
+public func ezoic_unity_set_app_content(_ language: UnsafePointer<CChar>?, _ genre: UnsafePointer<CChar>?) {
+    let languageString = language.map { String(cString: $0) }
+    let genreString = genre.map { String(cString: $0) }
+    DispatchQueue.main.async {
+        EzoicAds.shared.setAppContent(language: languageString, genre: genreString)
+    }
+}
+
 @_cdecl("ezoic_unity_set_subject_to_coppa")
 public func ezoic_unity_set_subject_to_coppa(_ subject: Int32) {
     DispatchQueue.main.async {
@@ -488,7 +500,8 @@ private func presentConsentDialog(_ callId: Int32, reopen: Bool) {
         // The SDK moves the dialog to the key window's top-most view controller if
         // this one is presenting something else by the time the dialog is ready.
         guard let host = currentRootViewController() else {
-            fireConsent(callId, .failed(.noRootViewController))
+            // ConsentOutcome.failed carries `Error` from native 1.22.0, so name the type.
+            fireConsent(callId, .failed(EzoicError.noRootViewController))
             return
         }
         let completion: (ConsentOutcome) -> Void = { outcome in fireConsent(callId, outcome) }
@@ -522,6 +535,14 @@ public func ezoic_unity_reset_consent() {
 @_cdecl("ezoic_unity_is_consent_required")
 public func ezoic_unity_is_consent_required() -> Int32 {
     guard let required = EzoicAds.shared.isConsentRequired else { return -1 }
+    return required ? 1 : 0
+}
+
+/// Synchronous tri-state read (-1 unknown, 0 false, 1 true), like
+/// ezoic_unity_is_consent_required.
+@_cdecl("ezoic_unity_is_privacy_options_required")
+public func ezoic_unity_is_privacy_options_required() -> Int32 {
+    guard let required = EzoicAds.shared.isPrivacyOptionsRequired else { return -1 }
     return required ? 1 : 0
 }
 

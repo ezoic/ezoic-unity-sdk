@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Audit the iOS C-ABI surface: Swift @_cdecl exports vs C# [DllImport] externs.
 
-The Unity iOS bridge is two halves of one C ABI that must stay in lockstep:
+Run once per package (com.ezoic.ads at the repository root, com.ezoic.cmp-sdk in
+``com.ezoic.cmp-sdk~/``). Each package's iOS bridge is two halves of one C ABI that must stay
+in lockstep:
 
   * Swift side  -- Runtime/Plugins/iOS/*.swift declares the native entry points with
                    ``@_cdecl("ezoic_unity_...")`` above a ``func`` whose parameter list is
@@ -14,9 +16,11 @@ If either side adds, removes, renames, or changes the arity of an entry point wi
 other following, the player links against a symbol that does not exist (crash) or calls it
 with the wrong stack shape (memory corruption). This script fails loudly on any such drift.
 
-Audit rules:
+Audit rules (per package, plus one across packages):
   * The set of Swift @_cdecl names MUST equal the set of C# __Internal entry-point names
     (an entry point name is EntryPoint="..." when present, otherwise the extern method name).
+  * No export name may appear in both packages: an app with both installed links both
+    bridges into one binary (UnityFramework).
   * For every shared name, the Swift func parameter count MUST equal the C# extern parameter
     count. (Type marshaling is not checked here -- the Swift type-check CI job covers the
     Swift half, and IL2CPP the C# half; this guards names and arity, the two things no
@@ -222,41 +226,39 @@ def collect(dir_path, suffix, parse_fn):
     return merged
 
 
-def main():
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    repo_root = os.path.normpath(os.path.join(script_dir, ".."))
-    swift_dir = os.path.join(repo_root, "Runtime", "Plugins", "iOS")
-    cs_dir = os.path.join(repo_root, "Runtime", "iOS")
+# (package label, package root relative to the repository root).
+PACKAGES = [
+    ("com.ezoic.ads", "."),
+    ("com.ezoic.cmp-sdk", "com.ezoic.cmp-sdk~"),
+]
 
-    print("Auditing iOS C-ABI surface")
+
+def audit_package(label, package_root, repo_root):
+    """Audit one package's Swift/C# pair. Returns (exports or None, problems list)."""
+    swift_dir = os.path.normpath(os.path.join(package_root, "Runtime", "Plugins", "iOS"))
+    cs_dir = os.path.normpath(os.path.join(package_root, "Runtime", "iOS"))
+
+    print("Auditing iOS C-ABI surface of %s" % label)
     print("  Swift @_cdecl:   %s/*.swift" % os.path.relpath(swift_dir, repo_root))
     print("  C# [DllImport]:  %s/*.cs" % os.path.relpath(cs_dir, repo_root))
-    print("")
 
     try:
         swift = collect(swift_dir, ".swift", parse_swift_exports)
         cs = collect(cs_dir, ".cs", parse_cs_externs)
     except ValueError as e:
-        sys.stderr.write("ERROR: %s\n" % e)
-        return 1
-
+        return None, ["%s: %s" % (label, e)]
     if swift is None or cs is None:
-        return 1
-
+        return None, ["%s: could not read the bridge sources" % label]
     if not swift:
-        sys.stderr.write("ERROR: no @_cdecl exports found under %s\n" % swift_dir)
-        return 1
+        return None, ["%s: no @_cdecl exports found under %s" % (label, swift_dir)]
     if not cs:
-        sys.stderr.write("ERROR: no __Internal externs found under %s\n" % cs_dir)
-        return 1
+        return None, ["%s: no __Internal externs found under %s" % (label, cs_dir)]
 
     swift_names = set(swift)
     cs_names = set(cs)
-
     only_swift = sorted(swift_names - cs_names)
     only_cs = sorted(cs_names - swift_names)
     shared = sorted(swift_names & cs_names)
-
     arity_mismatches = [
         (name, swift[name], cs[name]) for name in shared if swift[name] != cs[name]
     ]
@@ -266,19 +268,40 @@ def main():
             print("  OK    %s (%d args)" % (name, swift[name]))
 
     problems = []
-    if only_swift:
-        for name in only_swift:
-            print("  MISS  %s (Swift export has no C# DllImport)" % name)
-            problems.append("%s: exported in Swift but no matching C# [DllImport]" % name)
-    if only_cs:
-        for name in only_cs:
-            print("  MISS  %s (C# DllImport has no Swift export)" % name)
-            problems.append("%s: imported in C# but no matching Swift @_cdecl" % name)
+    for name in only_swift:
+        print("  MISS  %s (Swift export has no C# DllImport)" % name)
+        problems.append("%s: exported in Swift but no matching C# [DllImport]" % name)
+    for name in only_cs:
+        print("  MISS  %s (C# DllImport has no Swift export)" % name)
+        problems.append("%s: imported in C# but no matching Swift @_cdecl" % name)
     for name, sc, cc in arity_mismatches:
         print("  MISS  %s (Swift %d args vs C# %d args)" % (name, sc, cc))
         problems.append("%s: parameter count differs (Swift %d, C# %d)" % (name, sc, cc))
-
     print("")
+    return swift, problems
+
+
+def main():
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    repo_root = os.path.normpath(os.path.join(script_dir, ".."))
+
+    problems = []
+    owner = {}  # export name -> package label
+    total = 0
+    for label, relative_root in PACKAGES:
+        exports, package_problems = audit_package(
+            label, os.path.join(repo_root, relative_root), repo_root)
+        problems.extend(package_problems)
+        if exports is None:
+            continue
+        total += len(exports)
+        for name in sorted(exports):
+            if name in owner:
+                print("  MISS  %s (exported by both %s and %s)" % (name, owner[name], label))
+                problems.append("%s: exported by both %s and %s" % (name, owner[name], label))
+            else:
+                owner[name] = label
+
     if problems:
         print("EXTERN AUDIT FAILED: %d issue(s):" % len(problems))
         for p in problems:
@@ -286,8 +309,8 @@ def main():
         return 1
 
     print(
-        "EXTERN AUDIT PASS: %d entry points match by name and arity across the C ABI."
-        % len(shared)
+        "EXTERN AUDIT PASS: %d entry points across %d packages match by name and arity, "
+        "with no name exported twice." % (total, len(PACKAGES))
     )
     return 0
 

@@ -40,64 +40,38 @@ namespace Ezoic.Ads.Android
 
         private static ConsentResult Decode(AndroidJavaObject outcome)
         {
-            if (outcome == null)
-            {
-                return new ConsentResult(ConsentOutcome.Failed, ConsentDecision.None, "unknown consent outcome");
-            }
-
             try
             {
-                string className;
-                using (var cls = outcome.Call<AndroidJavaObject>(JniNames.Framework.getClass))
+                string className = null;
+                if (outcome != null)
                 {
-                    className = cls.Call<string>(JniNames.Framework.getName);
+                    using (var cls = outcome.Call<AndroidJavaObject>(JniNames.Framework.getClass))
+                    {
+                        className = cls.Call<string>(JniNames.Framework.getName);
+                    }
                 }
 
-                switch (className)
-                {
-                    case JniNames.ConsentOutcomeNotRequired.Class:
-                        return new ConsentResult(ConsentOutcome.NotRequired, ConsentDecision.None, null);
-                    case JniNames.ConsentOutcomeAlreadyDecided.Class:
-                        return new ConsentResult(ConsentOutcome.AlreadyDecided, ConsentDecision.None, null);
-                    case JniNames.ConsentOutcomeDecided.Class:
+                return ConsentOutcomeMapping.FromJava(
+                    className,
+                    () =>
+                    {
                         using (var decision = outcome.Call<AndroidJavaObject>(JniNames.ConsentOutcomeDecided.getDecision))
                         {
-                            return new ConsentResult(ConsentOutcome.Decided, DecisionFrom(decision), null);
+                            return decision?.Call<string>(JniNames.Framework.name);
                         }
-                    case JniNames.ConsentOutcomeDismissed.Class:
-                        return new ConsentResult(ConsentOutcome.Dismissed, ConsentDecision.None, null);
-                    case JniNames.ConsentOutcomeAlreadyPresenting.Class:
-                        return new ConsentResult(ConsentOutcome.AlreadyPresenting, ConsentDecision.None, null);
-                    case JniNames.ConsentOutcomeFailed.Class:
+                    },
+                    () =>
+                    {
                         using (var error = outcome.Call<AndroidJavaObject>(JniNames.ConsentOutcomeFailed.getError))
                         {
-                            return new ConsentResult(ConsentOutcome.Failed, ConsentDecision.None, AndroidBridge.ErrorMessage(error));
+                            return AndroidBridge.ErrorMessage(error);
                         }
-                    default:
-                        // An outcome added by a newer native SDK: closed without a known choice.
-                        return new ConsentResult(ConsentOutcome.Dismissed, ConsentDecision.None, null);
-                }
+                    });
             }
             catch (Exception e)
             {
                 Debug.LogException(e);
                 return new ConsentResult(ConsentOutcome.Failed, ConsentDecision.None, e.Message);
-            }
-        }
-
-        private static ConsentDecision DecisionFrom(AndroidJavaObject decision)
-        {
-            if (decision == null)
-            {
-                return ConsentDecision.None;
-            }
-
-            switch (decision.Call<string>(JniNames.Framework.name))
-            {
-                case JniNames.ConsentDecisionType.ACCEPT_ALL: return ConsentDecision.AcceptAll;
-                case JniNames.ConsentDecisionType.REJECT_ALL: return ConsentDecision.RejectAll;
-                case JniNames.ConsentDecisionType.CUSTOM: return ConsentDecision.Custom;
-                default: return ConsentDecision.None;
             }
         }
     }
