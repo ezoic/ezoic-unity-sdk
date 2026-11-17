@@ -1,0 +1,7 @@
+apply plugin: 'java-library'
+
+dependencies {
+// Android Resolver Dependencies Start
+    implementation 'com.ezoic.sdk:ezoic-ads-sdk:EZOIC_ANDROID_VERSION' // Packages/com.ezoic.ads/Editor/EzoicDependencies.xml
+// Android Resolver Dependencies End
+}

@@ -64,7 +64,7 @@ namespace Ezoic.Ads.Samples
         private void Start()
         {
             Log("Ready. Set your domain + ad unit ids, then tap Initialize.");
-            Log("SDK version: " + Describe(EzoicAds.Version));
+            Log("SDK version: " + Describe(EzoicAds.Version) + ", Ezoic CMP included: " + EzoicAds.IsBuiltInCmpIncluded);
         }
 
         private void OnDestroy()

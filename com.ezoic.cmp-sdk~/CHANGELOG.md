@@ -8,6 +8,14 @@ this package.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.24.0] - 2026-11-17
+
+Released with `com.ezoic.ads` 1.24.0; the Android and iOS native SDKs share the version 1.24.0 again (there is no 1.23 of this package).
+
+### Changed
+- Native pins bumped to `com.ezoic.sdk:ezoic-cmp-sdk:1.24.0` and the `EzoicCmpSDK` product of the `ezoic-swift-sdk-dist` Swift package 1.24.0 (up to next major). The consent types moved into the new native library `com.ezoic.sdk:ezoic-consent-core` / `EzoicConsentCore`, which the CMP library brings in. No API change and no change in how the CMP behaves. Install with `https://github.com/ezoic/ezoic-unity-sdk.git#cmp-sdk/v1.24.0`.
+- This package needs the Ezoic CMP, so it can't be used in a project where `com.ezoic.ads` 1.24.0 has the new **Include Ezoic CMP** setting off: Android and iOS builds stop with an error.
+
 ## [1.22.3] - 2026-11-17
 
 This package goes from 1.22.0 straight to 1.22.3: there is no 1.22.1 or 1.22.2. It is released with `com.ezoic.ads` 1.22.3. The Android and iOS native SDKs now have their own version numbers, and this package's version follows the Android one.

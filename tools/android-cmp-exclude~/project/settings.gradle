@@ -1,0 +1,15 @@
+// Stand-in for the Gradle project Unity generates: a launcher module that depends on
+// unityLibrary, where EDM's Android Resolver puts the Ezoic dependency. Plain Java modules,
+// because only Gradle's dependency resolution is checked (not an Android build); the Maven
+// repository reads POMs so the Android variants of the published Gradle metadata don't matter.
+dependencyResolutionManagement {
+    repositories {
+        maven {
+            url 'https://repo1.maven.org/maven2'
+            metadataSources { mavenPom(); ignoreGradleMetadataRedirection() }
+        }
+        google()
+    }
+}
+rootProject.name = 'ezoic-cmp-exclude-check'
+include ':launcher', ':unityLibrary'

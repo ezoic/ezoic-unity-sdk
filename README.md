@@ -25,7 +25,7 @@ guards in your game code.
 
 | | Android | iOS |
 | --- | --- | --- |
-| Native Ezoic SDK | `com.ezoic.sdk:ezoic-ads-sdk:1.22.3` (brings `com.ezoic.sdk:ezoic-cmp-sdk:1.22.3`) | `EzoicAdsSDK` Swift package 1.23.2 (up to next major) |
+| Native Ezoic SDK | `com.ezoic.sdk:ezoic-ads-sdk:1.24.0` (brings `com.ezoic.sdk:ezoic-consent-core:1.24.0` and `com.ezoic.sdk:ezoic-cmp-sdk:1.24.0`) | `EzoicAdsSDK` product of the `ezoic-swift-sdk-dist` Swift package 1.24.0 (up to next major) |
 | Google Mobile Ads (pulled in transitively) | 25.x (`play-services-ads:25.5.0`) | 13.x |
 | Toolchain | Target API Level 34+ (the SDK depends on `androidx.browser:browser:1.8.0`, which needs compileSdk 34+) | Xcode 26.2+ (required by Google Mobile Ads 13.x) |
 | Minimum OS | Android 7.0 (API 24) | iOS 15.0 |
@@ -38,8 +38,8 @@ can resolve a single version. The Android library needs `play-services-ads` 25.5
 installs as a Swift package while another plugin installs the `Google-Mobile-Ads-SDK`
 CocoaPod, the app links two copies of Google Mobile Ads.
 
-The Android and iOS native SDKs have their own version numbers. This package's version follows
-the Android one, so 1.22.3 uses Android 1.22.3 and iOS 1.23.2.
+From 1.24.0 the Android and iOS native SDKs and this package share one version again: 1.24.0
+uses Android 1.24.0 and iOS 1.24.0.
 
 ## Installation
 
@@ -48,7 +48,7 @@ the Android one, so 1.22.3 uses Android 1.22.3 and iOS 1.23.2.
 In Unity, open **Window → Package Manager → + → Add package from git URL…** and enter:
 
 ```
-https://github.com/ezoic/ezoic-unity-sdk.git#v1.22.3
+https://github.com/ezoic/ezoic-unity-sdk.git#v1.24.0
 ```
 
 Or add it to your project's `Packages/manifest.json` dependencies:
@@ -56,18 +56,19 @@ Or add it to your project's `Packages/manifest.json` dependencies:
 ```json
 {
   "dependencies": {
-    "com.ezoic.ads": "https://github.com/ezoic/ezoic-unity-sdk.git#v1.22.3"
+    "com.ezoic.ads": "https://github.com/ezoic/ezoic-unity-sdk.git#v1.24.0"
   }
 }
 ```
 
-The `#v1.22.3` suffix pins a released version; omit it to track the default branch.
+The `#v1.24.0` suffix pins a released version; omit it to track the default branch.
 
 ### 2. Provide the native Android library
 
-The Android ads run on the native `com.ezoic.sdk:ezoic-ads-sdk:1.22.3` library, which is
-published on Maven Central together with the consent library it depends on,
-`com.ezoic.sdk:ezoic-cmp-sdk:1.22.3` (Gradle and EDM4U add it for you). You need to make that dependency available to your Android build
+The Android ads run on the native `com.ezoic.sdk:ezoic-ads-sdk:1.24.0` library, which is
+published on Maven Central together with the libraries it depends on,
+`com.ezoic.sdk:ezoic-consent-core:1.24.0` and the Ezoic CMP `com.ezoic.sdk:ezoic-cmp-sdk:1.24.0`
+(Gradle and EDM4U add them for you). You need to make that dependency available to your Android build
 in **one** of two ways.
 
 **Option A — External Dependency Manager for Unity (EDM4U), recommended.**
@@ -82,7 +83,7 @@ Maven Central repository to the generated `Assets/Plugins/Android/mainTemplate.g
 
 ```gradle
 dependencies {
-    implementation 'com.ezoic.sdk:ezoic-ads-sdk:1.22.3'
+    implementation 'com.ezoic.sdk:ezoic-ads-sdk:1.24.0'
 }
 ```
 
@@ -130,7 +131,8 @@ Make sure **Swift Package Manager Integration** is on in the iOS Resolver settin
 **Assets → External Dependency Manager → iOS Resolver → Settings** for EDM4U, where it is on by
 default). This package's `Editor/EzoicDependencies.xml` then makes the iOS Resolver add the
 `https://github.com/ezoic/ezoic-swift-sdk-dist.git` package (up to next major version from
-1.23.2) to the generated Xcode project and link its `EzoicAdsSDK` product to `UnityFramework`.
+1.24.0) to the generated Xcode project and link its `EzoicAdsSDK` product (the ads SDK with the
+Ezoic CMP) to `UnityFramework`.
 Xcode resolves the package, and Google Mobile Ads, Prebid Mobile and Amazon APS with it, when
 you open or build the project. No further action needed.
 
@@ -138,8 +140,9 @@ you open or build the project. No further action needed.
 If you do not use EDM, build the Xcode project from Unity, open `Unity-iPhone.xcodeproj`, and
 choose **File → Add Package Dependencies…**. Enter
 `https://github.com/ezoic/ezoic-swift-sdk-dist.git`, set **Dependency Rule** to
-**Up to Next Major Version** from `1.23.2`, click **Add Package**, and add the `EzoicAdsSDK`
-product to the `UnityFramework` target. A **Replace** build from Unity regenerates the Xcode
+**Up to Next Major Version** from `1.24.0`, click **Add Package**, and add the `EzoicAdsSDK`
+product to the `UnityFramework` target (or `EzoicAdsSDKWithoutCMP`, see
+[Using your own CMP](#using-your-own-cmp)). A **Replace** build from Unity regenerates the Xcode
 project and drops the package, so use **Append** or add it again.
 
 **CocoaPods is not supported from 1.22.0.** CocoaPods trunk stopped receiving Ezoic releases
@@ -248,12 +251,43 @@ Calling `PresentConsentIfRequired` again is harmless: it reports `AlreadyPresent
 dialog is open and `AlreadyDecided` once a valid decision is stored. Call it again after a
 `Dismissed` or `Failed` outcome to re-ask.
 
-**If your app already runs another CMP** (Google UMP, OneTrust, …), turn the built-in CMP off;
-the SDK then reads that CMP's `IABTCF_*` / `IABGPP_*` values:
+#### Using your own CMP
 
-```csharp
-EzoicAds.Initialize(new EzoicConfiguration("example.com") { CmpEnabled = false }, (success, error) => { /* ... */ });
-```
+If your app already runs another CMP (Google UMP, OneTrust, Didomi, …):
+
+1. **Turn the Ezoic CMP off in code**, so the SDK reads that CMP's `IABTCF_*` / `IABGPP_*`
+   values:
+
+   ```csharp
+   EzoicAds.Initialize(new EzoicConfiguration("example.com") { CmpEnabled = false }, (success, error) => { /* ... */ });
+   ```
+
+2. **Optionally, leave the Ezoic CMP's code out of the app**: open
+   **Edit → Project Settings → Ezoic** and turn off **Include Ezoic CMP** (on by default). The
+   setting is saved in `ProjectSettings/EzoicAdsSettings.json`; build scripts can set
+   `Ezoic.Ads.Editor.EzoicAdsSettings.IncludeCmp = false` before building. With it off:
+   - **Android:** after Unity generates the Gradle project, the package adds
+     `configurations.all { exclude group: 'com.ezoic.sdk', module: 'ezoic-cmp-sdk' }` to
+     `unityLibrary/build.gradle` and `launcher/build.gradle` (`ezoic-ads-sdk` and
+     `ezoic-consent-core` stay).
+   - **iOS:** after EDM's iOS Resolver has added the Swift package, the package switches the
+     product linked to `UnityFramework` from `EzoicAdsSDK` to `EzoicAdsSDKWithoutCMP` in the
+     generated Xcode project. Your code and `import EzoicAdsSDK` don't change.
+
+   Step 1 is still needed: an app without the CMP behaves exactly like `CmpEnabled = false`,
+   and with `CmpEnabled` left `true` the native SDK logs a warning at `Initialize`.
+   `EzoicAds.IsBuiltInCmpIncluded` tells the two apart at runtime: `true` when the app contains
+   the Ezoic CMP, `false` when the build left it out.
+
+   Notes:
+   - Leave **Include Ezoic CMP** on if the project also has the standalone `com.ezoic.cmp-sdk`
+     package, which needs the CMP; Android and iOS builds stop with an error otherwise.
+   - Android: EDM's Android Resolver must patch `mainTemplate.gradle` (**Custom Main Gradle
+     Template** on). If it copies the libraries into `Assets/Plugins/Android` instead, a Gradle
+     exclude can't remove the copied `ezoic-cmp-sdk` file, so the build stops with an error that
+     says so. With a hand-written Gradle dependency (no EDM), the exclude applies as well.
+   - iOS: build with **Replace** after changing the setting. If you add the Swift package in
+     Xcode yourself, add `EzoicAdsSDKWithoutCMP` instead of `EzoicAdsSDK`.
 
 **Manual consent.** You can also pass consent signals yourself. `SetGDPRConsent` writes your
 values to `IABTCF_gdprApplies` and `IABTCF_TCString` (since native 1.19.0) and makes the
@@ -407,8 +441,9 @@ platform that is not yet supported:
   game flow behave the same as on device — you just get a failure instead of a fill.
 - `EzoicAds.PresentConsentIfRequired` and `EzoicAds.PresentConsentSettings` deliver a
   `ConsentOutcome.Failed` result asynchronously.
-- `EzoicAds.IsInitialized` is `false`, `EzoicAds.IsConsentRequired` and
-  `EzoicAds.IsPrivacyOptionsRequired` are `null`, and `EzoicAds.Version` is an empty string.
+- `EzoicAds.IsInitialized` and `EzoicAds.IsBuiltInCmpIncluded` are `false`,
+  `EzoicAds.IsConsentRequired` and `EzoicAds.IsPrivacyOptionsRequired` are `null`, and
+  `EzoicAds.Version` is an empty string.
 
 ## API reference
 
@@ -417,13 +452,14 @@ platform that is not yet supported:
 | Member | Description |
 | --- | --- |
 | `Initialize(string domain, Action<bool, string> onComplete = null)` | Initialize the SDK for your domain. The callback reports `(success, error)`. Calling it again after a successful initialization (e.g. from a reloaded scene) reports success; the native SDK keeps the configuration from the first call. |
-| `Initialize(EzoicConfiguration configuration, Action<bool, string> onComplete = null)` | Same, with options. `EzoicConfiguration(string domain)` has `CmpEnabled` (default `true`; set `false` if you run your own CMP) and `AppPaid` (`bool?`, default `null`: not sent). |
+| `Initialize(EzoicConfiguration configuration, Action<bool, string> onComplete = null)` | Same, with options. `EzoicConfiguration(string domain)` has `CmpEnabled` (default `true`; set `false` if you run your own CMP, see [Using your own CMP](#using-your-own-cmp)) and `AppPaid` (`bool?`, default `null`: not sent). |
 | `IsInitialized` | `true` once initialization succeeds. |
 | `TrackPageview()` | Signal a new pageview / screen. |
 | `PresentConsentIfRequired(Action<ConsentResult> onComplete = null)` | Show the built-in consent dialog if this user must decide. Call once per launch right after `Initialize`. |
 | `PresentConsentSettings(Action<ConsentResult> onComplete = null)` | "Privacy settings": reopens the TCF dialog in GDPR regions, opens the US privacy settings in covered US states. |
 | `IsConsentRequired` | `bool?`: `true` when GDPR applies and the built-in dialog is in charge; `null` until initialization completes. |
 | `IsPrivacyOptionsRequired` | `bool?`: `true` in a GDPR region or a covered US state while the built-in CMP is in charge, `false` elsewhere, `null` while unknown. Show your "Privacy settings" button unless it is `false`. |
+| `IsBuiltInCmpIncluded` | `bool`: `true` when the app contains the Ezoic CMP (the default), `false` when the build left it out (**Include Ezoic CMP** off, see [Using your own CMP](#using-your-own-cmp)). Without it the SDK acts as with `CmpEnabled = false`. Doesn't need `Initialize`. |
 | `ResetConsent()` | Delete the built-in dialog's stored decision so it is shown again. |
 | `SetGDPRConsent(bool applies, string consentString)` | Set GDPR/TCF consent manually: written to `IABTCF_gdprApplies` / `IABTCF_TCString` (call before `Initialize`; the built-in dialog stands down for this launch). |
 | `SetGPPConsent(string gppString, string sectionIds)` | Set GPP consent. |
@@ -462,14 +498,14 @@ Each `vX.Y.Z` release also publishes it on its own as the tag `cmp-sdk/vX.Y.Z` (
 `upm/cmp-sdk`), whose root is the package:
 
 ```
-https://github.com/ezoic/ezoic-unity-sdk.git#cmp-sdk/v1.22.3
+https://github.com/ezoic/ezoic-unity-sdk.git#cmp-sdk/v1.24.0
 ```
 
 `EzoicCmp` has the same consent members as `EzoicAds` (`Initialize(domain)`,
 `PresentConsentIfRequired`, `PresentConsentSettings`, `IsConsentRequired`,
 `IsPrivacyOptionsRequired`, `ResetConsent`) and the same `ConsentResult` shape. It depends only
 on the native consent library (`com.ezoic.sdk:ezoic-cmp-sdk` / the `EzoicCmpSDK` Swift package
-product). See [its README](com.ezoic.cmp-sdk~/README.md).
+product), so it can't be combined with **Include Ezoic CMP** off. See [its README](com.ezoic.cmp-sdk~/README.md).
 
 `Ezoic.Cmp` and `Ezoic.Ads` each define `ConsentResult` / `ConsentOutcome` / `ConsentDecision`,
 so a script that imports both namespaces must qualify them (e.g. `Ezoic.Ads.ConsentResult`).

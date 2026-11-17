@@ -261,6 +261,36 @@ namespace Ezoic.Ads
         }
 
         /// <summary>
+        /// Whether the app contains the Ezoic CMP (the built-in consent dialog). <c>true</c> by
+        /// default; <c>false</c> when the build left it out with <b>Include Ezoic CMP</b> off
+        /// (Project Settings → Ezoic). Without it the SDK behaves as with
+        /// <see cref="EzoicConfiguration.CmpEnabled"/> <c>false</c>: no consent dialog, and
+        /// <see cref="PresentConsentIfRequired"/> / <see cref="PresentConsentSettings"/> report
+        /// <see cref="ConsentOutcome.NotRequired"/>. Tells "removed" apart from "disabled"; it does
+        /// not need <see cref="Initialize(EzoicConfiguration, Action{bool, string})"/>.
+        /// </summary>
+        public static bool IsBuiltInCmpIncluded
+        {
+            get
+            {
+                // A constant of the linked native library; no UI thread needed.
+                try
+                {
+                    using (var sdkClass = new AndroidJavaClass(JniNames.EzoicAds.Class))
+                    using (var instance = sdkClass.CallStatic<AndroidJavaObject>(JniNames.EzoicAds.getInstance))
+                    {
+                        return instance.Call<bool>(JniNames.EzoicAds.isBuiltInCmpIncluded);
+                    }
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e);
+                    return false;
+                }
+            }
+        }
+
+        /// <summary>
         /// Describes the app's content to bidders (OpenRTB <c>app.content</c>), replacing any
         /// previous value; every later ad request carries it. <paramref name="language"/> is an
         /// ISO-639-1 two-letter code (<c>"en"</c>, <c>"de"</c>); other values are dropped with a
@@ -532,6 +562,31 @@ namespace Ezoic.Ads
         }
 
         /// <summary>
+        /// Whether the app contains the Ezoic CMP (the built-in consent dialog). <c>true</c> by
+        /// default; <c>false</c> when the build left it out with <b>Include Ezoic CMP</b> off
+        /// (Project Settings → Ezoic). Without it the SDK behaves as with
+        /// <see cref="EzoicConfiguration.CmpEnabled"/> <c>false</c>: no consent dialog, and
+        /// <see cref="PresentConsentIfRequired"/> / <see cref="PresentConsentSettings"/> report
+        /// <see cref="ConsentOutcome.NotRequired"/>. Tells "removed" apart from "disabled"; it does
+        /// not need <see cref="Initialize(EzoicConfiguration, Action{bool, string})"/>.
+        /// </summary>
+        public static bool IsBuiltInCmpIncluded
+        {
+            get
+            {
+                try
+                {
+                    return IosBridge.IsBuiltInCmpIncluded();
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e);
+                    return false;
+                }
+            }
+        }
+
+        /// <summary>
         /// Describes the app's content to bidders (OpenRTB <c>app.content</c>), replacing any
         /// previous value; every later ad request carries it. <paramref name="language"/> is an
         /// ISO-639-1 two-letter code (<c>"en"</c>, <c>"de"</c>); other values are dropped with a
@@ -683,6 +738,9 @@ namespace Ezoic.Ads
 
         /// <summary>Always null on unsupported platforms.</summary>
         public static bool? IsPrivacyOptionsRequired => null;
+
+        /// <summary>Always false on unsupported platforms (no native SDK).</summary>
+        public static bool IsBuiltInCmpIncluded => false;
 
         /// <summary>No-op on unsupported platforms.</summary>
         public static void SetAppContent(string language, string genre)

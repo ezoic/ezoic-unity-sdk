@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Command-line wrapper around Editor/EzoicCmpProjectTransforms.cs, the edits the
+    "Include Ezoic CMP" setting makes to Unity's generated Gradle and Xcode projects. CI runs it
+    on real projects (a Gradle build and an Xcode build that link the Ezoic libraries) to check
+    that the edited projects build and leave the CMP out, without a Unity Editor. The `~` folder
+    suffix keeps Unity from importing it.
+
+    Arguments: gradle|pbxproj FILE include|exclude (FILE is edited in place). See the
+    cmp-removal jobs in .github/workflows/ci.yml for how CI runs it with `dotnet run`.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>9</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="../../Editor/EzoicCmpProjectTransforms.cs" Link="EzoicCmpProjectTransforms.cs" />
+  </ItemGroup>
+
+</Project>

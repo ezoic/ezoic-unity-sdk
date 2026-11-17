@@ -1,8 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    Unit tests for the platform-independent parts of both packages (consent outcome mapping
-    and the iOS C-ABI value encodings). They compile the pure source files directly, so no
+    Unit tests for the platform-independent parts of both packages (consent outcome mapping,
+    the iOS C-ABI value encodings, and the Gradle / Xcode project transforms behind the
+    "Include Ezoic CMP" Editor setting). They compile the pure source files directly, so no
     Unity assemblies are needed. The `~` folder suffix keeps Unity from importing these
     sources into the com.ezoic.ads package.
 
@@ -25,6 +26,8 @@
     <Compile Include="../../Runtime/Android/JniNames.cs" Link="Ads/JniNames.cs" />
     <Compile Include="../../Runtime/Android/ConsentOutcomeMapping.cs" Link="Ads/ConsentOutcomeMapping.cs" />
     <Compile Include="../../Runtime/iOS/IosAbi.cs" Link="Ads/IosAbi.cs" />
+    <Compile Include="../../Editor/EzoicCmpProjectTransforms.cs" Link="Ads/Editor/EzoicCmpProjectTransforms.cs" />
+    <None Include="Fixtures/**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

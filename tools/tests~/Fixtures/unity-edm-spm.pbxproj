@@ -1,0 +1,112 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		1D60589F0D05DD5A006BFB54 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1D30AB110D05D00D00E5C8EE /* Foundation.framework */; };
+		5A1C2E3F4B5D6E7F8A9B0C1D /* EzoicAdsSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 7E8F9A0B1C2D3E4F5A6B7C8D /* EzoicAdsSDK */; };
+		6B2D3F4A5C6E7F8A9B0C1D2E /* EzoicAdsUnityBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F9A0B1C2D3E4F5A6B7C8D9E /* EzoicAdsUnityBridge.swift */; };
+		9C0D1E2F3A4B5C6D7E8F9A0B /* EzoicAdsSDK in Frameworks */ = {isa = PBXBuildFile; productRef = AD1E2F3A4B5C6D7E8F9A0B1C /* EzoicAdsSDK */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		1D30AB110D05D00D00E5C8EE /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		8F9A0B1C2D3E4F5A6B7C8D9E /* EzoicAdsUnityBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EzoicAdsUnityBridge.swift; path = "Libraries/com.ezoic.ads/Runtime/Plugins/iOS/EzoicAdsUnityBridge.swift"; sourceTree = SOURCE_ROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		9D863A1F2178BA6A0055A9E6 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1D60589F0D05DD5A006BFB54 /* Foundation.framework in Frameworks */,
+				5A1C2E3F4B5D6E7F8A9B0C1D /* EzoicAdsSDK in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXNativeTarget section */
+		9D863A1D2178BA6A0055A9E6 /* UnityFramework */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9D863A3B2178BA6A0055A9E6 /* Build configuration list for PBXNativeTarget "UnityFramework" */;
+			buildPhases = (
+				9D863A1F2178BA6A0055A9E6 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = UnityFramework;
+			packageProductDependencies = (
+				7E8F9A0B1C2D3E4F5A6B7C8D /* EzoicAdsSDK */,
+			);
+			productName = UnityFramework;
+			productType = "com.apple.product-type.framework";
+		};
+		BE2F3A4B5C6D7E8F9A0B1C2D /* SomethingElse */ = {
+			isa = PBXNativeTarget;
+			buildPhases = (
+			);
+			name = SomethingElse;
+			packageProductDependencies = (
+				AD1E2F3A4B5C6D7E8F9A0B1C /* EzoicAdsSDK */,
+			);
+			productName = SomethingElse;
+			productType = "com.apple.product-type.framework";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin XCBuildConfiguration section */
+		9D863A3C2178BA6A0055A9E6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+				);
+				GCC_PREPROCESSOR_DEFINITIONS = "QUOTED=\"yes\" // not a comment";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		0F1A2B3C4D5E6F7A8B9C0D1E /* XCRemoteSwiftPackageReference "ezoic-swift-sdk-dist" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/ezoic/ezoic-swift-sdk-dist.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.24.0;
+			};
+		};
+		1A2B3C4D5E6F7A8B9C0D1E2F /* XCRemoteSwiftPackageReference "someone-elses-fork" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://example.com/someone/ads-fork.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		7E8F9A0B1C2D3E4F5A6B7C8D /* EzoicAdsSDK */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0F1A2B3C4D5E6F7A8B9C0D1E /* XCRemoteSwiftPackageReference "ezoic-swift-sdk-dist" */;
+			productName = EzoicAdsSDK;
+		};
+		AD1E2F3A4B5C6D7E8F9A0B1C /* EzoicAdsSDK */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1A2B3C4D5E6F7A8B9C0D1E2F /* XCRemoteSwiftPackageReference "someone-elses-fork" */;
+			productName = EzoicAdsSDK;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 29B97313FDCFA39411CA2CEA /* Project object */;
+}

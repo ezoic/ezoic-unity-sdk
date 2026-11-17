@@ -21,7 +21,8 @@
 import Foundation
 import UIKit
 // The prebuilt XCFramework's module is EzoicCmpSDKBinary; the Swift package's
-// product is EzoicCmpSDK.
+// product is EzoicCmpSDK. It re-exports the consent core (EzoicConsentCore),
+// where ConsentOutcome and ConsentDecisionType live from native 1.24.0.
 #if canImport(EzoicCmpSDKBinary)
 import EzoicCmpSDKBinary
 #else

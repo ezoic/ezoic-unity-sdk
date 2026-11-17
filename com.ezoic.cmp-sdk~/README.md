@@ -13,7 +13,9 @@ analytics SDKs read.
 > **Use one package.** The Ezoic Ads package (`com.ezoic.ads`) already includes this CMP
 > through `EzoicAds`, with the same consent methods. If your app shows Ezoic ads, use
 > `EzoicAds` and don't add this package. Installing both works (each native library is linked
-> once), but `EzoicAds` then takes the CMP over.
+> once), but `EzoicAds` then takes the CMP over. This package needs the CMP, so don't install it
+> in a project where `com.ezoic.ads` has **Include Ezoic CMP** off (Project Settings → Ezoic):
+> Android and iOS builds stop with an error.
 
 The CMP is for Ezoic publishers only: Ezoic refuses domains it doesn't know, and the CMP then
 stays off (every request reports `Failed`, nothing is written).
@@ -22,8 +24,8 @@ stays off (every request reports `Failed`, nothing is written).
 
 | Platform | Status |
 | --- | --- |
-| Android | Supported (Minimum API Level 24) — native `com.ezoic.sdk:ezoic-cmp-sdk:1.22.3` |
-| iOS | Supported (iOS 15+, Xcode 26.2+) — `EzoicCmpSDK` product of the `ezoic-swift-sdk-dist` Swift package 1.23.2 (up to next major) |
+| Android | Supported (Minimum API Level 24) — native `com.ezoic.sdk:ezoic-cmp-sdk:1.24.0` (brings `com.ezoic.sdk:ezoic-consent-core:1.24.0`) |
+| iOS | Supported (iOS 15+, Xcode 26.2+) — `EzoicCmpSDK` product of the `ezoic-swift-sdk-dist` Swift package 1.24.0 (up to next major) |
 | Editor / other platforms | Calls are safe no-ops: requests report `Failed`, getters return `null` |
 
 ## Installation
@@ -37,7 +39,7 @@ with the package at the root. In Unity, open
 **Window → Package Manager → + → Add package from git URL…** and enter:
 
 ```
-https://github.com/ezoic/ezoic-unity-sdk.git#cmp-sdk/v1.22.3
+https://github.com/ezoic/ezoic-unity-sdk.git#cmp-sdk/v1.24.0
 ```
 
 Or add it to `Packages/manifest.json`:
@@ -45,14 +47,14 @@ Or add it to `Packages/manifest.json`:
 ```json
 {
   "dependencies": {
-    "com.ezoic.cmp-sdk": "https://github.com/ezoic/ezoic-unity-sdk.git#cmp-sdk/v1.22.3"
+    "com.ezoic.cmp-sdk": "https://github.com/ezoic/ezoic-unity-sdk.git#cmp-sdk/v1.24.0"
   }
 }
 ```
 
-The `#cmp-sdk/v1.22.3` suffix pins a released version; `#upm/cmp-sdk` tracks the latest release.
+The `#cmp-sdk/v1.24.0` suffix pins a released version; `#upm/cmp-sdk` tracks the latest release.
 An alternative that installs straight from the `vX.Y.Z` tag,
-`https://github.com/ezoic/ezoic-unity-sdk.git?path=/com.ezoic.cmp-sdk~#v1.22.3`, requires
+`https://github.com/ezoic/ezoic-unity-sdk.git?path=/com.ezoic.cmp-sdk~#v1.24.0`, requires
 Unity to accept the `~` path (Unity normally skips folders ending in `~`); prefer the tag
 above.
 
@@ -64,14 +66,14 @@ above.
 This package's `Editor/EzoicCmpDependencies.xml` makes the Android Resolver add
 `com.ezoic.sdk:ezoic-cmp-sdk` (Maven Central) to your Gradle build, and the iOS Resolver add the
 `https://github.com/ezoic/ezoic-swift-sdk-dist.git` Swift package (up to next major from
-1.23.2) with its `EzoicCmpSDK` product to `UnityFramework`. Keep **Swift Package Manager
+1.24.0) with its `EzoicCmpSDK` product to `UnityFramework`. Keep **Swift Package Manager
 Integration** on in the iOS Resolver settings; there is no CocoaPod.
 
 **Without EDM.** Android: enable **Custom Main Gradle Template** and add
-`implementation 'com.ezoic.sdk:ezoic-cmp-sdk:1.22.3'` (with `mavenCentral()` in your
+`implementation 'com.ezoic.sdk:ezoic-cmp-sdk:1.24.0'` (with `mavenCentral()` in your
 repositories). iOS: in the generated Xcode project choose **File → Add Package
 Dependencies…**, enter `https://github.com/ezoic/ezoic-swift-sdk-dist.git`, **Up to Next
-Major Version** from `1.23.2`, and add the `EzoicCmpSDK` product to the `UnityFramework`
+Major Version** from `1.24.0`, and add the `EzoicCmpSDK` product to the `UnityFramework`
 target. A **Replace** build from Unity drops the package, so use **Append** or add it again.
 
 Set the iOS Deployment Target to **15.0 or higher** and the Android **Minimum API Level** to 24

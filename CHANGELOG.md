@@ -5,6 +5,17 @@ All notable changes to the Ezoic Ads Unity SDK are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.24.0] - 2026-11-17
+
+This package goes from 1.22.3 to 1.24.0, the version the Android and iOS native SDKs now share again (there is no 1.23 of this package). The Ezoic CMP stays included and on by default; apps that use another CMP can now leave its code out of the build.
+
+### Added
+- **Include Ezoic CMP** project setting (**Edit → Project Settings → Ezoic**, default on, saved in `ProjectSettings/EzoicAdsSettings.json`; build scripts can set `Ezoic.Ads.Editor.EzoicAdsSettings.IncludeCmp`). Turn it off only if your app uses another CMP, together with `CmpEnabled = false`. With it off, Android builds add `configurations.all { exclude group: 'com.ezoic.sdk', module: 'ezoic-cmp-sdk' }` to the generated `unityLibrary/build.gradle` and `launcher/build.gradle`, and iOS builds link the `EzoicAdsSDKWithoutCMP` product of the Swift package instead of `EzoicAdsSDK` (after EDM's iOS Resolver has added it). The app then behaves exactly as with `CmpEnabled = false`. The build stops with an error if the project also has `com.ezoic.cmp-sdk` (which needs the CMP), or if EDM copied the Android libraries into `Assets/Plugins/Android` instead of patching `mainTemplate.gradle`. See "Using your own CMP" in the README.
+- `EzoicAds.IsBuiltInCmpIncluded` (`bool`): `true` when the app contains the Ezoic CMP, `false` when the build left it out. `false` in the editor and on unsupported platforms.
+
+### Changed
+- Native pins bumped to `com.ezoic.sdk:ezoic-ads-sdk:1.24.0` and the `EzoicAdsSDK` Swift package 1.24.0 (up to next major). The native consent types (`ConsentOutcome`, `ConsentDecisionType`, `ConsentOutcomeListener`, iOS `EzoicErrorCode`) moved into a new small library, `com.ezoic.sdk:ezoic-consent-core` / `EzoicConsentCore`, which the ads library brings in alongside `ezoic-cmp-sdk`. Nothing changes for code that only uses this package's C# API. If your own Swift code uses CMP-only types (`EzoicCmp`, `EzoicCmpConfiguration`, `CmpError`), add `import EzoicCmpSDK`: `import EzoicAdsSDK` no longer re-exports them. If you added the Swift package in Xcode yourself, update it to 1.24.0 or later.
+
 ## [1.22.3] - 2026-11-17
 
 This package goes from 1.22.0 straight to 1.22.3: there is no 1.22.1 or 1.22.2, and this release has every native change since 1.22.0. The Android and iOS native SDKs now have their own version numbers, and this package's version follows the Android one. No API change in this package: the iOS native SDK's new sticky anchor banner (`EzoicAnchorAd`) is not available through this package's C# API.

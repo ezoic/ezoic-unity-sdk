@@ -3,8 +3,9 @@ namespace Ezoic.Cmp.Android
     /// <summary>
     /// Every JNI class name and method/field name the CMP's Android bridge uses, in one place.
     /// <c>tools/audit-jni.py</c> (in the repository) parses this file and verifies with
-    /// <c>javap</c> against the published <c>com.ezoic.sdk:ezoic-cmp-sdk</c> AAR that each class
-    /// and member listed here exists. There must be no inline JNI-name string literals anywhere
+    /// <c>javap</c> against the published <c>com.ezoic.sdk:ezoic-cmp-sdk</c> AAR and the
+    /// <c>com.ezoic.sdk:ezoic-consent-core</c> AAR it depends on (home of the consent types from
+    /// native 1.24.0) that each class and member listed here exists. There must be no inline JNI-name string literals anywhere
     /// else in the bridge.
     ///
     /// Audit convention: each nested class whose <c>Class</c> constant starts with

@@ -3,23 +3,29 @@
   External Dependency Manager (EDM / EDM4U) dependency manifest.
   Declares the native Ezoic Ads libraries so the resolvers add them to the
   generated builds: the Android Resolver adds the Maven package to Gradle
-  (com.ezoic.sdk:ezoic-cmp-sdk comes with it), and the iOS Resolver adds the
-  Swift package to the generated Xcode project. iOS needs Swift Package Manager
-  Integration on (EDM4U 1.2.189+, Unity's EDM 2.1+): from 1.22.0 there is no
-  CocoaPod to fall back to, because CocoaPods trunk stopped at 1.19.1.
+  (com.ezoic.sdk:ezoic-consent-core and com.ezoic.sdk:ezoic-cmp-sdk come with
+  it), and the iOS Resolver adds the Swift package to the generated Xcode
+  project and links its EzoicAdsSDK product (ads and the Ezoic CMP).
+  With "Include Ezoic CMP" off (Project Settings > Ezoic), this package's
+  build post-processors (Editor/EzoicCmpBuildProcessor.cs) exclude
+  ezoic-cmp-sdk from the generated Gradle project and switch the linked
+  product to EzoicAdsSDKWithoutCMP after the iOS Resolver has added it.
+  iOS needs Swift Package Manager Integration on (EDM4U 1.2.189+, Unity's EDM
+  2.1+): from 1.22.0 there is no CocoaPod to fall back to, because CocoaPods
+  trunk stopped at 1.19.1.
   If your project does not use EDM, add the equivalent dependencies to your
   mainTemplate.gradle / Xcode project manually (see README).
 -->
 <dependencies>
   <androidPackages>
-    <androidPackage spec="com.ezoic.sdk:ezoic-ads-sdk:1.22.3">
+    <androidPackage spec="com.ezoic.sdk:ezoic-ads-sdk:1.24.0">
       <repositories>
         <repository>https://repo1.maven.org/maven2</repository>
       </repositories>
     </androidPackage>
   </androidPackages>
   <!-- replacesPod: skip a trunk EzoicAdsSDK pod some other manifest might still declare. -->
-  <remoteSwiftPackage url="https://github.com/ezoic/ezoic-swift-sdk-dist.git" version="1.23.2" upToNextMajor="true">
+  <remoteSwiftPackage url="https://github.com/ezoic/ezoic-swift-sdk-dist.git" version="1.24.0" upToNextMajor="true">
     <swiftPackage name="EzoicAdsSDK" replacesPod="EzoicAdsSDK" />
   </remoteSwiftPackage>
 </dependencies>
