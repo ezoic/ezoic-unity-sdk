@@ -5,7 +5,19 @@ All notable changes to the Ezoic Ads Unity SDK are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.22.0] - Unreleased
+## [1.22.3] - 2026-11-17
+
+This package goes from 1.22.0 straight to 1.22.3: there is no 1.22.1 or 1.22.2, and this release has every native change since 1.22.0. The Android and iOS native SDKs now have their own version numbers, and this package's version follows the Android one. No API change in this package: the iOS native SDK's new sticky anchor banner (`EzoicAnchorAd`) is not available through this package's C# API.
+
+### Changed
+- Native pins bumped to `com.ezoic.sdk:ezoic-ads-sdk:1.22.3` (which brings `com.ezoic.sdk:ezoic-cmp-sdk:1.22.3`) and the `EzoicAdsSDK` Swift package 1.23.2 (up to next major). If you added the Swift package in Xcode yourself, update it to 1.23.2 or later.
+- Interstitials: an interstitial that Google renders is closed by the SDK once it has been in front for about 20 seconds without being dismissed, and `OnDismissed` fires as usual. Google decides when its close button appears, and a few video ads withheld it for minutes, with no way for the game to close them. Time the ad spends covered (a store page, a browser, the game in the background) does not count. Rewarded ads are never closed this way. Nothing to change in your game.
+- Banners created without a size: the native SDKs request the largest of 728x90, 468x60 and 320x50 that fits the width the banner has, not the screen width. A Unity banner is overlaid on the game view, so most games get the same size as before. On iOS the width is measured inside the safe area, so an iPhone whose safe area in landscape is narrower than 728 points can get 468x60 where it got 728x90.
+
+### Fixed
+- Android: a banner won by a header bidding (Prebid) ad is shown at its real size. Before, the SDK could shrink it to about 1x1 right after it loaded, so the ad counted as loaded but was not visible, and `OnSizeChanged` reported the requested size and then a tiny one.
+
+## [1.22.0] - 2026-11-11
 
 ### Added
 - `EzoicAds.IsPrivacyOptionsRequired` (`bool?`): `true` in a GDPR region or a covered US state while the built-in CMP is in charge, so you know when to show a "Privacy settings" button; `null` while unknown.

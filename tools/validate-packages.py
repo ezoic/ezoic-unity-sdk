@@ -8,12 +8,14 @@
 Checks:
   * package.json and the asmdef of each package parse; the names are right and both packages
     carry the same version (they are released from one vX.Y.Z tag).
-  * Each EDM manifest pins its own Maven artifact (ezoic-ads-sdk / ezoic-cmp-sdk) at the same
-    native version, and declares exactly one remoteSwiftPackage: the ezoic-swift-sdk-dist URL,
-    upToNextMajor, at that native version, with its product (EzoicAdsSDK / EzoicCmpSDK).
-    EDM merges the two entries for one URL into a single package reference.
+  * Each EDM manifest pins its own Maven artifact (ezoic-ads-sdk / ezoic-cmp-sdk), both at the
+    same Android native version, and declares exactly one remoteSwiftPackage: the
+    ezoic-swift-sdk-dist URL, upToNextMajor, both at the same iOS native version, with its
+    product (EzoicAdsSDK / EzoicCmpSDK). EDM merges the two entries for one URL into a single
+    package reference. The Android and iOS native SDKs are versioned separately (Android
+    1.22.3 goes with iOS 1.23.2), so the two platforms' versions are not compared.
   * No iosPod: from 1.22.0 there is no CocoaPod to fall back to.
-  * tools/swift-typecheck/Package.swift pins the same URL and version.
+  * tools/swift-typecheck/Package.swift pins the same URL and iOS native version.
   * Both READMEs give the CMP install URL ...ezoic-unity-sdk.git#cmp-sdk/v<version>.
   * Every tracked asset Unity imports from either package has a .meta file. Packages
     installed from git are immutable, and Unity ignores an asset without one.
@@ -83,9 +85,11 @@ def listed_files(root):
 
 def check_package(root, spec, tracked, problems):
     """Checks one package rooted at root. tracked holds repo-relative paths ("<root>/..." unless
-    root is "."). Returns (package version, {manifest label: native version})."""
+    root is "."). Returns (package version, {manifest label: Android native version},
+    {manifest label: iOS native version})."""
     _, name, asmdef, manifest, artifact, products = spec
-    native_versions = {}
+    android_versions = {}
+    ios_versions = {}
     with open(os.path.join(root, "package.json"), encoding="utf-8") as f:
         package = json.load(f)
     if package.get("name") != name:
@@ -101,7 +105,7 @@ def check_package(root, spec, tracked, problems):
     if len(specs) != 1 or not re.fullmatch(r"com\.ezoic\.sdk:%s:[0-9][^:]*" % re.escape(artifact), specs[0] or ""):
         problems.append("%s: expected one androidPackage com.ezoic.sdk:%s:<version>, found %r" % (label, artifact, specs))
     else:
-        native_versions[label] = specs[0].rsplit(":", 1)[1]
+        android_versions[label] = specs[0].rsplit(":", 1)[1]
 
     spm = list(deps.iter("remoteSwiftPackage"))
     if len(spm) != 1:
@@ -115,14 +119,28 @@ def check_package(root, spec, tracked, problems):
         found = [(p.get("name"), p.get("replacesPod")) for p in spm.findall("swiftPackage")]
         if found != products:
             problems.append("%s: swiftPackage products are %r, expected %r" % (label, found, products))
-        native_versions[label + " (Swift package)"] = spm.get("version")
+        ios_versions[label + " (Swift package)"] = spm.get("version")
 
     if list(deps.iter("iosPod")):
         problems.append("%s: iosPod is not supported from 1.22.0 (CocoaPods trunk is frozen)" % label)
 
     for entry in missing_metas(root, tracked):
         problems.append("%s: no .meta file (Unity ignores it in an installed package)" % entry)
-    return package.get("version"), native_versions
+    return package.get("version"), android_versions, ios_versions
+
+
+def check_native_versions(android_versions, ios_versions, problems):
+    """Requires one Android native version and one iOS native version across the manifests
+    checked. Returns (Android version, iOS version); either is None when it is not single."""
+    single = []
+    for platform, found in (("Android", android_versions), ("iOS", ios_versions)):
+        values = set(found.values())
+        if len(values) != 1 or None in values:
+            problems.append("%s native versions missing or different: %r" % (platform, found))
+            single.append(None)
+        else:
+            single.append(values.pop())
+    return tuple(single)
 
 
 def cmp_install_url(version):
@@ -146,9 +164,8 @@ def validate_standalone_cmp(tree, expect_version):
     tracked = set(os.path.join(tree, path) for path in listed_files(tree))
     if not os.path.isfile(os.path.join(tree, "package.json")):
         return report(["%s: no package.json at the root" % tree], "")
-    version, native_versions = check_package(tree, PACKAGES[1], tracked, problems)
-    if len(set(native_versions.values())) != 1:
-        problems.append("native versions differ: %r" % native_versions)
+    version, android_versions, ios_versions = check_package(tree, PACKAGES[1], tracked, problems)
+    check_native_versions(android_versions, ios_versions, problems)
     if expect_version and version != expect_version:
         problems.append("package version is %r, the release tag says %r" % (version, expect_version))
     with open(os.path.join(tree, "README.md"), encoding="utf-8") as f:
@@ -173,29 +190,29 @@ def main(argv):
     tracked = listed_files(".")
     problems = []
     versions = {}
-    native_versions = {}
+    android_versions = {}
+    ios_versions = {}
 
     for spec in PACKAGES:
         root = spec[0]
-        version, natives = check_package(root, spec, tracked, problems)
+        version, android, ios = check_package(root, spec, tracked, problems)
         versions[spec[1]] = version
-        native_versions.update(natives)
+        android_versions.update(android)
+        ios_versions.update(ios)
 
     if len(set(versions.values())) != 1:
         problems.append("package versions differ: %r" % versions)
     if args.expect_version and set(versions.values()) != {args.expect_version}:
         problems.append("package versions %r, the release tag says %r" % (versions, args.expect_version))
-    if len(set(native_versions.values())) != 1:
-        problems.append("native versions differ: %r" % native_versions)
+    android_native, ios_native = check_native_versions(android_versions, ios_versions, problems)
 
-    native = next(iter(native_versions.values()), None)
     with open("tools/swift-typecheck/Package.swift", encoding="utf-8") as f:
         manifest_text = f.read()
     m = re.search(r'url: "([^"]+)",\s*\.upToNextMajor\(from: "([^"]+)"\)', manifest_text)
     if not m:
         problems.append("tools/swift-typecheck/Package.swift must use .upToNextMajor(from:)")
-    elif m.groups() != (DIST_URL, native):
-        problems.append("tools/swift-typecheck/Package.swift pins %r, the EDM manifests pin %r" % (m.groups(), (DIST_URL, native)))
+    elif m.groups() != (DIST_URL, ios_native):
+        problems.append("tools/swift-typecheck/Package.swift pins %r, the EDM manifests pin %r" % (m.groups(), (DIST_URL, ios_native)))
 
     version = versions.get("com.ezoic.cmp-sdk")
     for readme in (os.path.join(CMP_DIR, "README.md"), "README.md"):
@@ -203,8 +220,8 @@ def main(argv):
             if cmp_install_url(version) not in f.read():
                 problems.append("%s: does not give the install URL %s" % (readme, cmp_install_url(version)))
 
-    return report(problems, "com.ezoic.ads and com.ezoic.cmp-sdk %s, native %s, "
-                  "Swift package %s up to next major." % (version, native, DIST_URL))
+    return report(problems, "com.ezoic.ads and com.ezoic.cmp-sdk %s, Android native %s, "
+                  "Swift package %s %s up to next major." % (version, android_native, DIST_URL, ios_native))
 
 
 if __name__ == "__main__":

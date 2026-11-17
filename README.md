@@ -25,7 +25,7 @@ guards in your game code.
 
 | | Android | iOS |
 | --- | --- | --- |
-| Native Ezoic SDK | `com.ezoic.sdk:ezoic-ads-sdk:1.22.0` (brings `com.ezoic.sdk:ezoic-cmp-sdk:1.22.0`) | `EzoicAdsSDK` Swift package 1.22.0 (up to next major) |
+| Native Ezoic SDK | `com.ezoic.sdk:ezoic-ads-sdk:1.22.3` (brings `com.ezoic.sdk:ezoic-cmp-sdk:1.22.3`) | `EzoicAdsSDK` Swift package 1.23.2 (up to next major) |
 | Google Mobile Ads (pulled in transitively) | 25.x (`play-services-ads:25.5.0`) | 13.x |
 | Toolchain | Target API Level 34+ (the SDK depends on `androidx.browser:browser:1.8.0`, which needs compileSdk 34+) | Xcode 26.2+ (required by Google Mobile Ads 13.x) |
 | Minimum OS | Android 7.0 (API 24) | iOS 15.0 |
@@ -38,6 +38,9 @@ can resolve a single version. The Android library needs `play-services-ads` 25.5
 installs as a Swift package while another plugin installs the `Google-Mobile-Ads-SDK`
 CocoaPod, the app links two copies of Google Mobile Ads.
 
+The Android and iOS native SDKs have their own version numbers. This package's version follows
+the Android one, so 1.22.3 uses Android 1.22.3 and iOS 1.23.2.
+
 ## Installation
 
 ### 1. Add the package (UPM git URL)
@@ -45,7 +48,7 @@ CocoaPod, the app links two copies of Google Mobile Ads.
 In Unity, open **Window → Package Manager → + → Add package from git URL…** and enter:
 
 ```
-https://github.com/ezoic/ezoic-unity-sdk.git#v1.22.0
+https://github.com/ezoic/ezoic-unity-sdk.git#v1.22.3
 ```
 
 Or add it to your project's `Packages/manifest.json` dependencies:
@@ -53,18 +56,18 @@ Or add it to your project's `Packages/manifest.json` dependencies:
 ```json
 {
   "dependencies": {
-    "com.ezoic.ads": "https://github.com/ezoic/ezoic-unity-sdk.git#v1.22.0"
+    "com.ezoic.ads": "https://github.com/ezoic/ezoic-unity-sdk.git#v1.22.3"
   }
 }
 ```
 
-The `#v1.22.0` suffix pins a released version; omit it to track the default branch.
+The `#v1.22.3` suffix pins a released version; omit it to track the default branch.
 
 ### 2. Provide the native Android library
 
-The Android ads run on the native `com.ezoic.sdk:ezoic-ads-sdk:1.22.0` library, which is
+The Android ads run on the native `com.ezoic.sdk:ezoic-ads-sdk:1.22.3` library, which is
 published on Maven Central together with the consent library it depends on,
-`com.ezoic.sdk:ezoic-cmp-sdk:1.22.0` (Gradle and EDM4U add it for you). You need to make that dependency available to your Android build
+`com.ezoic.sdk:ezoic-cmp-sdk:1.22.3` (Gradle and EDM4U add it for you). You need to make that dependency available to your Android build
 in **one** of two ways.
 
 **Option A — External Dependency Manager for Unity (EDM4U), recommended.**
@@ -79,7 +82,7 @@ Maven Central repository to the generated `Assets/Plugins/Android/mainTemplate.g
 
 ```gradle
 dependencies {
-    implementation 'com.ezoic.sdk:ezoic-ads-sdk:1.22.0'
+    implementation 'com.ezoic.sdk:ezoic-ads-sdk:1.22.3'
 }
 ```
 
@@ -127,7 +130,7 @@ Make sure **Swift Package Manager Integration** is on in the iOS Resolver settin
 **Assets → External Dependency Manager → iOS Resolver → Settings** for EDM4U, where it is on by
 default). This package's `Editor/EzoicDependencies.xml` then makes the iOS Resolver add the
 `https://github.com/ezoic/ezoic-swift-sdk-dist.git` package (up to next major version from
-1.22.0) to the generated Xcode project and link its `EzoicAdsSDK` product to `UnityFramework`.
+1.23.2) to the generated Xcode project and link its `EzoicAdsSDK` product to `UnityFramework`.
 Xcode resolves the package, and Google Mobile Ads, Prebid Mobile and Amazon APS with it, when
 you open or build the project. No further action needed.
 
@@ -135,7 +138,7 @@ you open or build the project. No further action needed.
 If you do not use EDM, build the Xcode project from Unity, open `Unity-iPhone.xcodeproj`, and
 choose **File → Add Package Dependencies…**. Enter
 `https://github.com/ezoic/ezoic-swift-sdk-dist.git`, set **Dependency Rule** to
-**Up to Next Major Version** from `1.22.0`, click **Add Package**, and add the `EzoicAdsSDK`
+**Up to Next Major Version** from `1.23.2`, click **Add Package**, and add the `EzoicAdsSDK`
 product to the `UnityFramework` target. A **Replace** build from Unity regenerates the Xcode
 project and drops the package, so use **Append** or add it again.
 
@@ -340,6 +343,10 @@ EzoicInterstitialAd.Load(
     onFailed: error => Debug.LogWarning("Interstitial load failed: " + error));
 ```
 
+An interstitial that Google renders is closed by the SDK once it has been in front for about
+20 seconds without being dismissed, and `OnDismissed` fires as usual; rewarded ads are never
+closed this way.
+
 Always call `ad.Destroy()` when you are done with an interstitial; skipping it leaks the native
 ad object, since the managed and native peers hold a cross-heap reference cycle that neither
 garbage collector can collect on its own.
@@ -455,7 +462,7 @@ Each `vX.Y.Z` release also publishes it on its own as the tag `cmp-sdk/vX.Y.Z` (
 `upm/cmp-sdk`), whose root is the package:
 
 ```
-https://github.com/ezoic/ezoic-unity-sdk.git#cmp-sdk/v1.22.0
+https://github.com/ezoic/ezoic-unity-sdk.git#cmp-sdk/v1.22.3
 ```
 
 `EzoicCmp` has the same consent members as `EzoicAds` (`Initialize(domain)`,
