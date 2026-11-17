@@ -15,7 +15,9 @@ Published tags never move, on either name.
 
 1. The native SDKs are released first: `com.ezoic.sdk:ezoic-ads-sdk` and
    `com.ezoic.sdk:ezoic-cmp-sdk` resolve from Maven Central, and `ezoic-swift-sdk-dist` has the
-   `X.Y.Z` tag. CI's `jni-audit` and `swift-bridge` jobs need them.
+   tag of the iOS version. CI's `jni-audit` and `swift-bridge` jobs need them. The Android and
+   iOS native SDKs have their own version numbers (Android 1.22.3 goes with iOS 1.23.2); the
+   packages' version `X.Y.Z` follows the Android one.
 2. Bump `version` in `package.json` and `com.ezoic.cmp-sdk~/package.json`, the native pins in
    `Editor/EzoicDependencies.xml`, `com.ezoic.cmp-sdk~/Editor/EzoicCmpDependencies.xml` and
    `tools/swift-typecheck/Package.swift`, the install URLs in both READMEs, and both CHANGELOGs.
