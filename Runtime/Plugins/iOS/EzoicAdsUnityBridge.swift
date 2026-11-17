@@ -39,8 +39,12 @@
 import Foundation
 import UIKit
 // The prebuilt XCFramework's module is EzoicAdsSDKBinary (a hand-vendored or
-// CocoaPods-style install); the Swift package's product is EzoicAdsSDK. Both
-// re-export the CMP module, where ConsentOutcome lives from 1.22.0.
+// CocoaPods-style install); the Swift package's products EzoicAdsSDK and
+// EzoicAdsSDKWithoutCMP both import it as EzoicAdsSDK. Both re-export the
+// consent core (EzoicConsentCore), where ConsentOutcome, ConsentDecisionType and
+// EzoicErrorCode live from native 1.24.0. This bridge uses no CMP-only type
+// (EzoicCmp, CmpError, ...), so it compiles and links without the CMP module,
+// which EzoicAdsSDKWithoutCMP leaves out ("Include Ezoic CMP" off).
 #if canImport(EzoicAdsSDKBinary)
 import EzoicAdsSDKBinary
 #else
@@ -544,6 +548,14 @@ public func ezoic_unity_is_consent_required() -> Int32 {
 public func ezoic_unity_is_privacy_options_required() -> Int32 {
     guard let required = EzoicAds.shared.isPrivacyOptionsRequired else { return -1 }
     return required ? 1 : 0
+}
+
+/// 1 when the app links the built-in Ezoic CMP (product EzoicAdsSDK), 0 when it
+/// was left out (EzoicAdsSDKWithoutCMP). A constant of the linked binary; touches
+/// no registry, callback, or UIKit object.
+@_cdecl("ezoic_unity_is_built_in_cmp_included")
+public func ezoic_unity_is_built_in_cmp_included() -> Int32 {
+    return EzoicAds.isBuiltInCmpIncluded ? 1 : 0
 }
 
 /// Returns a heap-allocated (strdup) UTF-8 copy of the SDK version. The caller

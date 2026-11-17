@@ -4,8 +4,10 @@ namespace Ezoic.Ads.Android
     /// Every JNI class name and method/field name used by the Android bridge, in one place.
     /// The <c>tools/audit-jni.py</c> script parses this file and verifies (via <c>javap</c>
     /// against the published AARs: <c>ezoic-ads-sdk</c> and, for the
-    /// <c>com.ezoic.ads.sdk.privacy.cmp</c> classes, <c>ezoic-cmp-sdk</c>) that each Ezoic SDK
-    /// class and member listed here actually exists. There must be no inline JNI-name string literals anywhere else in the bridge.
+    /// <c>com.ezoic.ads.sdk.privacy.cmp</c> consent types, <c>ezoic-consent-core</c>) that each
+    /// Ezoic SDK class and member listed here actually exists. Nothing here may come from
+    /// <c>ezoic-cmp-sdk</c>: with "Include Ezoic CMP" off the app doesn't have it (CI audits
+    /// this file without that AAR). There must be no inline JNI-name string literals anywhere else in the bridge.
     ///
     /// Audit convention: each nested class whose <c>Class</c> constant starts with
     /// <c>com.ezoic</c> is audited; every other string constant in that nested class is treated
@@ -29,6 +31,7 @@ namespace Ezoic.Ads.Android
             internal const string resetConsent = "resetConsent";
             internal const string isConsentRequired = "isConsentRequired";
             internal const string isPrivacyOptionsRequired = "isPrivacyOptionsRequired";
+            internal const string isBuiltInCmpIncluded = "isBuiltInCmpIncluded";
             internal const string setAppContent = "setAppContent";
             internal const string VERSION = "VERSION";
         }

@@ -12,3 +12,7 @@ Library/
 # Python bytecode cache from the tools/ audit scripts (audit-jni.py, audit-extern.py)
 __pycache__/
 *.pyc
+
+# tools/ios-cmp-link~/check.sh work directory
+tools/ios-cmp-link~/.work/
+tools/android-cmp-exclude~/.work/

@@ -192,6 +192,12 @@ namespace Ezoic.Ads.iOS
             return IosAbi.DecodeOptionalBool(ezoic_unity_is_privacy_options_required());
         }
 
+        /// <summary>Native 1 when the app links the Ezoic CMP, 0 when it was left out.</summary>
+        internal static bool IsBuiltInCmpIncluded()
+        {
+            return ezoic_unity_is_built_in_cmp_included() != 0;
+        }
+
         internal static void SetAppContent(string language, string genre)
         {
             EnsureCallbacksRegistered();
@@ -543,6 +549,9 @@ namespace Ezoic.Ads.iOS
 
         [DllImport("__Internal", EntryPoint = "ezoic_unity_is_privacy_options_required")]
         private static extern int ezoic_unity_is_privacy_options_required();
+
+        [DllImport("__Internal", EntryPoint = "ezoic_unity_is_built_in_cmp_included")]
+        private static extern int ezoic_unity_is_built_in_cmp_included();
 
         [DllImport("__Internal", EntryPoint = "ezoic_unity_set_app_content")]
         private static extern void ezoic_unity_set_app_content([MarshalAs(UnmanagedType.LPUTF8Str)] string language, [MarshalAs(UnmanagedType.LPUTF8Str)] string genre);

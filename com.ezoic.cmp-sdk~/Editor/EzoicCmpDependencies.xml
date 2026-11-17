@@ -8,16 +8,18 @@
   ads library depends on it), and EDM merges both manifests' entries for the same
   Swift package URL into one package reference, so each native library is linked
   once. Without EDM, add the equivalent dependencies manually (see README).
+  This package needs the Ezoic CMP: don't install it in a project where
+  com.ezoic.ads has "Include Ezoic CMP" off (the build stops with an error).
 -->
 <dependencies>
   <androidPackages>
-    <androidPackage spec="com.ezoic.sdk:ezoic-cmp-sdk:1.22.3">
+    <androidPackage spec="com.ezoic.sdk:ezoic-cmp-sdk:1.24.0">
       <repositories>
         <repository>https://repo1.maven.org/maven2</repository>
       </repositories>
     </androidPackage>
   </androidPackages>
-  <remoteSwiftPackage url="https://github.com/ezoic/ezoic-swift-sdk-dist.git" version="1.23.2" upToNextMajor="true">
+  <remoteSwiftPackage url="https://github.com/ezoic/ezoic-swift-sdk-dist.git" version="1.24.0" upToNextMajor="true">
     <swiftPackage name="EzoicCmpSDK" />
   </remoteSwiftPackage>
 </dependencies>

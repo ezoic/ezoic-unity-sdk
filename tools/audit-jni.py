@@ -9,9 +9,11 @@ The C# bridges never hard-code a Java class or member name inline; every name li
 
 This script parses both and, for every Ezoic SDK class they declare, uses ``javap`` against the
 extracted AAR classes to confirm the class exists and that every member name the bridge relies
-on is present. From native 1.22.0 the ``com.ezoic.ads.sdk.privacy.cmp`` classes live in the
-``ezoic-cmp-sdk`` AAR, so the classpath must hold both AARs' classes. If a bridge and the
-shipped SDK ever drift, this fails loudly.
+on is present. The ``com.ezoic.ads.sdk.privacy.cmp`` classes are split across AARs: from native
+1.24.0 the consent types (``ConsentOutcome``, ``ConsentOutcomeListener``, ``ConsentDecisionType``)
+live in ``ezoic-consent-core`` and the CMP (``EzoicCmp`` ...) in ``ezoic-cmp-sdk``, so the
+classpath must hold every AAR the audited bridge needs. If a bridge and the shipped SDK ever
+drift, this fails loudly.
 
 Structure of JniNames.cs (the mapping is encoded by the file itself, no cleverness needed):
 
@@ -37,12 +39,14 @@ Audit rule (matches the doc comment in JniNames.cs):
     javap dump of that class.
 
 Environment:
-  AAR_CLASSES  (required)  directory with the extracted classes of both AARs (the classpath
+  AAR_CLASSES  (required)  directory with the extracted classes of the AARs (the classpath
                            root), or several such directories joined with os.pathsep.
   JAVAP        (optional)  path to the javap binary; defaults to "javap" on PATH.
   JNI_NAMES    (optional)  names files to audit (repo-relative, joined with os.pathsep);
-                           defaults to both. CI also audits the CMP file alone against the
-                           ezoic-cmp-sdk AAR alone, proving com.ezoic.cmp-sdk needs no ads classes.
+                           defaults to both. CI also audits each file alone against only the
+                           AARs an app has without the other package: the ads file against
+                           ezoic-ads-sdk + ezoic-consent-core (no CMP, as with "Include Ezoic
+                           CMP" off), the CMP file against ezoic-cmp-sdk + ezoic-consent-core.
 
 Exit code 0 and a PASS summary when every class and member is found; exit code 1 with a clear
 list of misses otherwise. Standard library only.

@@ -1,0 +1,29 @@
+# XcodeGen spec of a stand-in for the Xcode project Unity generates and EDM's iOS Resolver
+# fills in: a UnityFramework framework target that compiles com.ezoic.ads' Swift bridge and
+# links the EzoicAdsSDK product of ezoic-swift-sdk-dist, as EDM adds it. check.sh builds it as
+# is, then after the "Include Ezoic CMP" off edit (tools/cmp-transform~), and checks which
+# build has the CMP. EZOIC_DIST_VERSION is replaced with the version in
+# Editor/EzoicDependencies.xml.
+name: Unity-iPhone
+options:
+  deploymentTarget:
+    iOS: "15.0"
+packages:
+  ezoic-swift-sdk-dist:
+    url: https://github.com/ezoic/ezoic-swift-sdk-dist.git
+    majorVersion: EZOIC_DIST_VERSION
+targets:
+  UnityFramework:
+    type: framework
+    platform: iOS
+    sources:
+      - path: Bridge
+    dependencies:
+      - package: ezoic-swift-sdk-dist
+        product: EzoicAdsSDK
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.ezoic.unity.cmplinkcheck
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_VERSION: "5.0"
+        DEAD_CODE_STRIPPING: YES

@@ -61,6 +61,12 @@ jobs:
           -p:UnityManagedPath=$HOME/unity-managed
           -warnaserror
 
+      - name: Compile com.ezoic.ads' Editor assembly (Include Ezoic CMP setting, build post-processors)
+        run: >-
+          dotnet build tools/compile/Ezoic.Ads.EditorScripts.csproj
+          -p:UnityManagedPath=$HOME/unity-managed
+          -warnaserror
+
       - name: Compile com.ezoic.cmp-sdk (Android, iOS, Editor define sets)
         run: |
           set -euo pipefail
@@ -70,8 +76,9 @@ jobs:
               -warnaserror
           done
 
-  # Unit tests for the platform-independent mapping code of both packages (consent outcomes,
-  # iOS ABI value encodings). Plain .NET; no Unity assemblies.
+  # Unit tests for the platform-independent code of both packages (consent outcomes, iOS ABI
+  # value encodings, and the Gradle / Xcode project edits of the "Include Ezoic CMP" setting).
+  # Plain .NET; no Unity assemblies.
   unit-tests:
     runs-on: ubuntu-latest
     steps:
@@ -87,9 +94,12 @@ jobs:
         run: dotnet test "tools/tests~/Ezoic.Unity.Tests.csproj"
 
   # Verify every JNI class/method name the Android bridges use exists in the published AARs.
-  # From native 1.22.0 the com.ezoic.ads.sdk.privacy.cmp classes ship in ezoic-cmp-sdk, so both
-  # AARs are downloaded. The CMP package's names are also audited against the CMP AAR alone,
-  # since com.ezoic.cmp-sdk installs without the ads library.
+  # From native 1.24.0 the consent types (ConsentOutcome, ConsentOutcomeListener,
+  # ConsentDecisionType) ship in ezoic-consent-core and the CMP in ezoic-cmp-sdk, so all three
+  # AARs are downloaded. Each package's names are also audited against only the AARs an app
+  # has without the other: com.ezoic.ads against ezoic-ads-sdk + ezoic-consent-core (an app
+  # with "Include Ezoic CMP" off has no ezoic-cmp-sdk), and com.ezoic.cmp-sdk against
+  # ezoic-cmp-sdk + ezoic-consent-core (it installs without the ads library).
   jni-audit:
     runs-on: ubuntu-latest
     steps:
@@ -116,7 +126,7 @@ jobs:
             echo "::error::ezoic-ads-sdk $ads_version and ezoic-cmp-sdk $cmp_version must be the same version"
             exit 1
           fi
-          for artifact in ezoic-ads-sdk ezoic-cmp-sdk; do
+          for artifact in ezoic-ads-sdk ezoic-consent-core ezoic-cmp-sdk; do
             echo "Auditing com.ezoic.sdk:$artifact:$ads_version"
             curl -fL -o "$artifact.aar" \
               "https://repo1.maven.org/maven2/com/ezoic/sdk/$artifact/$ads_version/$artifact-$ads_version.aar"
@@ -126,14 +136,78 @@ jobs:
             (cd "aar_classes/$artifact" && jar xf "../../aar_extract/$artifact/classes.jar")
           done
 
-      - name: Run JNI signature audit (both packages, both AARs)
-        run: AAR_CLASSES="$PWD/aar_classes/ezoic-ads-sdk:$PWD/aar_classes/ezoic-cmp-sdk" python3 tools/audit-jni.py
+      - name: Run JNI signature audit (both packages, all three AARs)
+        run: AAR_CLASSES="$PWD/aar_classes/ezoic-ads-sdk:$PWD/aar_classes/ezoic-consent-core:$PWD/aar_classes/ezoic-cmp-sdk" python3 tools/audit-jni.py
 
-      - name: Run JNI signature audit (com.ezoic.cmp-sdk against ezoic-cmp-sdk alone)
+      - name: Run JNI signature audit (com.ezoic.ads without ezoic-cmp-sdk, as with Include Ezoic CMP off)
+        run: >-
+          JNI_NAMES='Runtime/Android/JniNames.cs'
+          AAR_CLASSES="$PWD/aar_classes/ezoic-ads-sdk:$PWD/aar_classes/ezoic-consent-core"
+          python3 tools/audit-jni.py
+
+      - name: Run JNI signature audit (com.ezoic.cmp-sdk against ezoic-cmp-sdk and ezoic-consent-core)
         run: >-
           JNI_NAMES='com.ezoic.cmp-sdk~/Runtime/Android/CmpJniNames.cs'
-          AAR_CLASSES="$PWD/aar_classes/ezoic-cmp-sdk"
+          AAR_CLASSES="$PWD/aar_classes/ezoic-cmp-sdk:$PWD/aar_classes/ezoic-consent-core"
           python3 tools/audit-jni.py
+
+  # "Include Ezoic CMP" off, Android, end to end without a Unity Editor: resolves the runtime
+  # classpath of a stand-in for Unity's generated Gradle project (launcher -> unityLibrary ->
+  # com.ezoic.sdk:ezoic-ads-sdk) before and after the exact edit the Editor post-processor makes
+  # (tools/cmp-transform~ runs Editor/EzoicCmpProjectTransforms.cs). ezoic-cmp-sdk must resolve
+  # by default and must not with the setting off; ezoic-ads-sdk and ezoic-consent-core always.
+  cmp-removal-android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.3'
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Check the Gradle exclude
+        run: "tools/android-cmp-exclude~/check.sh \"$RUNNER_TEMP/android-cmp-exclude\""
+
+  # "Include Ezoic CMP" off, iOS, end to end without a Unity Editor: builds a stand-in for
+  # Unity's UnityFramework target (tools/ios-cmp-link~/project.yml: com.ezoic.ads' Swift bridge
+  # plus the EzoicAdsSDK product of ezoic-swift-sdk-dist, as EDM adds it) for the simulator,
+  # then switches it with the exact edit the Editor post-processor makes (tools/cmp-transform~)
+  # and builds again. The default build must link the CMP's EZBuiltInCmpProvider class (a
+  # missing link fails silently at runtime); the build without the CMP must link no CMP class
+  # and no EzoicCmpSDKBinary symbol, and still the bridge.
+  cmp-removal-ios:
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Select Xcode 26.6
+        run: sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Check the Swift package product switch
+        run: "tools/ios-cmp-link~/check.sh \"$RUNNER_TEMP/ios-cmp-link\""
 
   # Type-check both packages' Swift bridges against the SwiftPM distribution
   # (ezoic-swift-sdk-dist) so a rename or signature drift in the native SDK breaks CI

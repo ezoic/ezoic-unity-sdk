@@ -12,8 +12,9 @@ Checks:
     same Android native version, and declares exactly one remoteSwiftPackage: the
     ezoic-swift-sdk-dist URL, upToNextMajor, both at the same iOS native version, with its
     product (EzoicAdsSDK / EzoicCmpSDK). EDM merges the two entries for one URL into a single
-    package reference. The Android and iOS native SDKs are versioned separately (Android
-    1.22.3 goes with iOS 1.23.2), so the two platforms' versions are not compared.
+    package reference. The Android and iOS native SDKs can be versioned separately (Android
+    1.22.3 went with iOS 1.23.2; 1.24.0 is one version again), so the two platforms' versions
+    are not compared.
   * No iosPod: from 1.22.0 there is no CocoaPod to fall back to.
   * tools/swift-typecheck/Package.swift pins the same URL and iOS native version.
   * Both READMEs give the CMP install URL ...ezoic-unity-sdk.git#cmp-sdk/v<version>.

@@ -13,11 +13,12 @@ Published tags never move, on either name.
 
 ## Steps
 
-1. The native SDKs are released first: `com.ezoic.sdk:ezoic-ads-sdk` and
-   `com.ezoic.sdk:ezoic-cmp-sdk` resolve from Maven Central, and `ezoic-swift-sdk-dist` has the
-   tag of the iOS version. CI's `jni-audit` and `swift-bridge` jobs need them. The Android and
-   iOS native SDKs have their own version numbers (Android 1.22.3 goes with iOS 1.23.2); the
-   packages' version `X.Y.Z` follows the Android one.
+1. The native SDKs are released first: `com.ezoic.sdk:ezoic-ads-sdk`,
+   `com.ezoic.sdk:ezoic-consent-core` and `com.ezoic.sdk:ezoic-cmp-sdk` resolve from Maven
+   Central, and `ezoic-swift-sdk-dist` has the tag of the iOS version. CI's `jni-audit`,
+   `cmp-removal-android`, `cmp-removal-ios` and `swift-bridge` jobs need them. The Android and
+   iOS native SDKs can have their own version numbers (Android 1.22.3 went with iOS 1.23.2;
+   from 1.24.0 they share one); the packages' version `X.Y.Z` follows the Android one.
 2. Bump `version` in `package.json` and `com.ezoic.cmp-sdk~/package.json`, the native pins in
    `Editor/EzoicDependencies.xml`, `com.ezoic.cmp-sdk~/Editor/EzoicCmpDependencies.xml` and
    `tools/swift-typecheck/Package.swift`, the install URLs in both READMEs, and both CHANGELOGs.
@@ -45,3 +46,11 @@ on):
    - both packages together: one `ezoic-cmp-sdk` in the Gradle dependencies, one
      `ezoic-swift-sdk-dist` package reference in the Xcode project with both the `EzoicAdsSDK`
      and `EzoicCmpSDK` products linked to `UnityFramework`.
+   - `com.ezoic.ads` alone with **Include Ezoic CMP** off (Project Settings → Ezoic):
+     `unityLibrary/build.gradle` and `launcher/build.gradle` end with the `ezoic-cmp-sdk`
+     exclude block and the APK has no `com/ezoic/ads/sdk/privacy/cmp/EzoicCmp` class; the Xcode
+     project links `EzoicAdsSDKWithoutCMP` (not `EzoicAdsSDK`) to `UnityFramework`; on both,
+     the sample logs "Ezoic CMP included: False", and `True` with the setting back on (a
+     **Replace** build). Building again into the same folder (Append) changes nothing.
+   - **Include Ezoic CMP** off with `com.ezoic.cmp-sdk` installed: the build stops with the
+     error that names the standalone package.
