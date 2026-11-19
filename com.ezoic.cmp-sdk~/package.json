@@ -1,6 +1,6 @@
 {
   "name": "com.ezoic.cmp-sdk",
-  "version": "1.24.0",
+  "version": "1.25.0",
   "displayName": "Ezoic CMP",
   "description": "Ezoic's consent management (CMP) for Unity apps of Ezoic publishers that don't use the Ezoic Ads package: the IAB TCF consent dialog in GDPR regions and the privacy notice and \"Do Not Sell\" choice in covered US states, through a simple C# API. Apps that use com.ezoic.ads already have it; use one of the two. Requires the External Dependency Manager (EDM / EDM4U) to resolve the native Android library and iOS Swift package, or a manual Gradle dependency / Xcode Swift package (see the README). Android: Minimum API Level 24. iOS: iOS 15+, Xcode 26.2+.",
   "unity": "2021.3",
