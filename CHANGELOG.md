@@ -5,6 +5,11 @@ All notable changes to the Ezoic Ads Unity SDK are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.25.0] - 2026-11-19
+
+### Changed
+- Pin Android `com.ezoic.sdk:ezoic-ads-sdk` and the iOS `EzoicAdsSDK` Swift package to 1.25.0. The native rewarded loaders now accept a call without an ad unit number. The Unity `EzoicRewardedAd.Load` method still requires `adUnitId`; native rewarded loads ignore its value. No Unity API change.
+
 ## [1.24.0] - 2026-11-17
 
 This package goes from 1.22.3 to 1.24.0, the version the Android and iOS native SDKs now share again (there is no 1.23 of this package). The Ezoic CMP stays included and on by default; apps that use another CMP can now leave its code out of the build.

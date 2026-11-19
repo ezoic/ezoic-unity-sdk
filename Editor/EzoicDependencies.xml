@@ -18,14 +18,14 @@
 -->
 <dependencies>
   <androidPackages>
-    <androidPackage spec="com.ezoic.sdk:ezoic-ads-sdk:1.24.0">
+    <androidPackage spec="com.ezoic.sdk:ezoic-ads-sdk:1.25.0">
       <repositories>
         <repository>https://repo1.maven.org/maven2</repository>
       </repositories>
     </androidPackage>
   </androidPackages>
   <!-- replacesPod: skip a trunk EzoicAdsSDK pod some other manifest might still declare. -->
-  <remoteSwiftPackage url="https://github.com/ezoic/ezoic-swift-sdk-dist.git" version="1.24.0" upToNextMajor="true">
+  <remoteSwiftPackage url="https://github.com/ezoic/ezoic-swift-sdk-dist.git" version="1.25.0" upToNextMajor="true">
     <swiftPackage name="EzoicAdsSDK" replacesPod="EzoicAdsSDK" />
   </remoteSwiftPackage>
 </dependencies>
