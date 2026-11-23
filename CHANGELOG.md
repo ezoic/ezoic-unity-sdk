@@ -5,6 +5,11 @@ All notable changes to the Ezoic Ads Unity SDK are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.26.0] - 2026-11-23
+
+### Changed
+- Pin Android `com.ezoic.sdk:ezoic-ads-sdk` and the iOS `EzoicAdsSDK` Swift package to 1.26.0. Banner bid requests now tell bidders where the ad sits on screen (OpenRTB `banner.pos`): the native SDK measures the banner view when it asks for bids. A Unity banner is overlaid on the game view, so it reports above the fold; a banner hidden with `Hide()` when it asks for bids sends no position. No Unity API change and nothing to change in your game.
+
 ## [1.25.0] - 2026-11-19
 
 ### Changed
