@@ -8,6 +8,11 @@ this package.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.26.0] - 2026-11-23
+
+### Changed
+- Pin Android `com.ezoic.sdk:ezoic-cmp-sdk` and the iOS `EzoicCmpSDK` Swift package to 1.26.0. No CMP API or behavior change. Install with `https://github.com/ezoic/ezoic-unity-sdk.git#cmp-sdk/v1.26.0`.
+
 ## [1.25.0] - 2026-11-19
 
 ### Changed
